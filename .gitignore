@@ -5,3 +5,5 @@ dist/
 screenshots/
 *.wav
 !js-demo/data/sound/**/*.wav
+.bin
+.idea
