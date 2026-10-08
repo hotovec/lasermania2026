@@ -2,6 +2,20 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Zvuk portu předrenderovaný z emulátoru dema.** `render_music.js --all` (Node) renderuje skladby 1–3
+  a efekty stejným kódem jako demo (`atari-audio.js`); port je hraje jako `AudioClip`. Důvod: blit386 hraje jen
+  klipy (`BT.musicPlay` / `BT.soundPlay`), živá emulace by obcházela engine; render 200 s hudby za běhu trvá
+  sekundy.
+- **2026-10-08 Smyčka z periody registrů POKEY.** Nejmenší perioda, se kterou se registry po snímcích VBI opakují
+  (okno 40 min), `loopStart`/`loopEnd` v sekundách (`music.json`); render do `loopEnd + 2 s`. Konstantní posun
+  dekodéru MP3 smyčce nevadí (oba body se posunou stejně). Kontrola obálkou, ne vzorky – fáze čítačů POKEY se na
+  švu liší.
+- **2026-10-08 OGG + MP3, efekty WAV, enkodér `wasm-media-encoders`.** `AudioClip.load([ogg, mp3])` (MP3 záloha
+  kvůli Safari), mono 44,1 kHz, Vorbis q4 / MP3 96 kb/s (~12 MB v `js-demo/data/sound/`, commitnuto jako ostatní
+  generovaná data). Efekty WAV bez zpoždění enkodéru. Enkodér je WASM devDependency `js-demo` (žádný systémový
+  `ffmpeg`). Soubory sdílí `js-demo` (export `./sound/*`), port je importuje přes Vite `?url`.
+- **2026-10-08 Klávesy M / N** ztlumí hudbu / efekty (`BT.audioMuteSet`); demo má tlačítka, originál nic.
+
 - **2026-10-08 Vstup podle `control2` (remake 2020).** Každý snímek se uloží první směr od posledního kroku
   (`BT.isDown` nebo `BT.isPressed`, aby prošlo i krátké ťuknutí), pohyb se provede na hranici kroku
   (`BT.ticks % 8`). Priorita při diagonále doprava > doleva > dolů > nahoru (`$94D4`). WASD + šipky hráče 0.

@@ -1,7 +1,7 @@
 // Lasermania pro BLIT386.
 //
-// Herní logika, data, dlaždice, paprsek a tank se importují z referenčního dema (balíček @lasermania/js-demo ve
-// složce ../js-demo). Logika běží v update() ve stejném taktu jako originál (50 Hz, herní krok
+// Herní logika, data, dlaždice, paprsek, tank a předrenderovaný zvuk se importují z referenčního dema
+// (balíček @lasermania/js-demo ve složce ../js-demo). Logika běží v update() ve stejném taktu jako originál (50 Hz, herní krok
 // každých 8 snímků); pohyb tanku se rozhodne na hranici kroku a 8 snímků se plynule animuje (jen kreslení).
 // Stav portu viz ../project/docs/porting-plan.md a "Your notes" v CLAUDE.md.
 
@@ -9,6 +9,7 @@ import { bootstrap, BT, Color32, Rect2i, SpriteSheet, Vector2i } from 'blit386';
 import LMCore, { type GameState } from '@lasermania/js-demo/core';
 import LMTiles from '@lasermania/js-demo/tiles';
 import data from '@lasermania/js-demo/data.json';
+import { levelSong, type Song, Sound } from './sound';
 
 // Paleta (slot 0 je vždy průhledný). Barvy PAL z originálu: pozadí, PF0 $22, PF1 $C4, PF2 $7C, PF3 $96.
 // Index dlaždice v (0 pozadí, 1-4 PF0-PF3) leží ve slotu v + 1.
@@ -40,6 +41,12 @@ const CELL = 8; // buňka paprsku = znak 8x8, mřížka 32x24
 const KEY_NEXT = 'PageDown';
 const KEY_PREV = 'PageUp';
 const KEY_RESTART = 'KeyR';
+// Zvuk: M hudba, N efekty (zap/vyp).
+const KEY_MUSIC = 'KeyM';
+const KEY_SFX = 'KeyN';
+// Hlasitost busů: hudba jako výchozí posuvník dema (60 %), efekty plně (demo je zesiluje 1,4x).
+const MUSIC_VOLUME = 0.6;
+const SFX_VOLUME = 1;
 
 // Směry joysticku v pořadí priority originálu při diagonále ($94D4): doprava > doleva > dolů > nahoru.
 // face jako GameState.face (0 nahoru, 1 doleva, 2 dolů, 3 doprava).
@@ -87,6 +94,13 @@ interface DevHook {
         beamPhase: number;
         frozen: boolean;
         ticks: number;
+        song: Song | null;
+        musicPlaying: boolean;
+        audioUnlocked: boolean;
+        musicMuted: boolean;
+        sfxMuted: boolean;
+        /** posledních pár přehraných efektů */
+        sounds: string[];
     };
     load(n: number, steps?: number, phase?: number): void;
     /** Fixture pro testy: tank na políčko `pos` (řádek*16 + sloupec). */
@@ -120,6 +134,7 @@ class Game {
     private beam!: SpriteSheet;
     private beamRects: Rect2i[] = [];
     private beamPos: Vector2i[] = [];
+    private readonly sound = new Sound();
 
     configure() {
         return {
@@ -166,6 +181,10 @@ class Game {
             );
         }
 
+        await this.sound.load();
+        BT.audioVolumeSet('music', MUSIC_VOLUME);
+        BT.audioVolumeSet('sfx', SFX_VOLUME);
+
         this.load(0);
         if (BT.isDevMode) {
             const hook: DevHook = {
@@ -187,6 +206,12 @@ class Game {
                         beamPhase: this.beamPhase(),
                         frozen: this.frozen,
                         ticks: BT.ticks,
+                        song: this.sound.song,
+                        musicPlaying: BT.isMusicPlaying,
+                        audioUnlocked: BT.isAudioUnlocked,
+                        musicMuted: BT.isAudioMuted('music'),
+                        sfxMuted: BT.isAudioMuted('sfx'),
+                        sounds: [...this.sound.recent],
                     };
                 },
                 load: (n, steps, phase) => {
@@ -231,6 +256,7 @@ class Game {
         this.blockedStart = null;
         this.winAt = null;
         this.finished = false;
+        this.sound.playSong(levelSong(this.levelNo));
     }
 
     // fáze animace paprsku jako VBI originálu: (RTCLOK & $0C) >> 2, RTCLOK = BT.ticks (50 Hz)
@@ -291,6 +317,8 @@ class Game {
         if (BT.isKeyPressed(KEY_NEXT)) this.load(this.levelNo + 1);
         else if (BT.isKeyPressed(KEY_PREV)) this.load(this.levelNo - 1);
         else if (BT.isKeyPressed(KEY_RESTART)) this.load(this.levelNo);
+        if (BT.isKeyPressed(KEY_MUSIC)) BT.audioMuteSet('music', !BT.isAudioMuted('music'));
+        if (BT.isKeyPressed(KEY_SFX)) BT.audioMuteSet('sfx', !BT.isAudioMuted('sfx'));
         if (this.frozen) return;
 
         if (this.winAt !== null && BT.ticks - this.winAt >= WIN_DELAY_TICKS && !this.finished) {
@@ -322,7 +350,7 @@ class Game {
         }
         this.pending = null;
         LMCore.tick(this.state);
-        LMCore.takeEvents(this.state); // zvuky efektů až v M5
+        this.sound.playEvents(LMCore.takeEvents(this.state)); // události z move i tick
     }
 
     // pauza před opakováním (podle control2.update): nový stisk pohne tankem hned; stejný směr držený nepřetržitě

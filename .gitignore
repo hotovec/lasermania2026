@@ -4,3 +4,4 @@ dist/
 *.log
 screenshots/
 *.wav
+!js-demo/data/sound/**/*.wav

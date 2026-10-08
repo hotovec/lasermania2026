@@ -163,7 +163,10 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
 - Fáze animace paprsku: `LMTiles.beamPhase(BT.ticks)` = `(BT.ticks & 0x0C) >> 2`; viz `../project/docs/game-data.md`.
 - Paleta: slot 0 průhledný, 1 černá, 2–5 = PF0–PF3, 6–7 tank. Barevný bit dlaždic z `INV_ORIG`, ne z `TYPES`.
 - `drawSprite` v 1.7.1 neumí rotaci → tank = originální PMG snímky směrů (nic se neotáčí).
-- Hudba se předrenderuje (`../js-demo/tools/render_music.js`) a hraje přes `BT.musicPlay` se smyčkou. Titulka skladba 3,
-  ve hře 1/2 podle `(level & 4)`. Efekty: `LMCore.takeEvents(state)` → `BT.soundPlay`.
+- Zvuk (`src/sound.ts`): předrenderovaný `npm run sound` (z kořene, `../js-demo/tools/render_music.js --all`) do
+  `../js-demo/data/sound/` (OGG + MP3, `music.json` se smyčkami, `sfx/*.wav`), importy
+  `@lasermania/js-demo/sound/...?url`. `BT.musicPlay` s `loopStart/loopEnd`; titulka skladba 3 (M6), ve hře 1/2
+  podle `level & 4`. Efekty: `LMCore.takeEvents(state)` → `Sound.playEvents` → `BT.soundPlay`. M / N ztlumí hudbu /
+  efekty. `state()` má `song`, `musicPlaying`, `audioUnlocked`, `musicMuted`, `sfxMuted`, `sounds`.
 - API ověřuj v `node_modules/blit386/dist/blit386.d.ts` (v monorepu je node_modules v kořeni: `../node_modules/`).
 - Po každé změně: `npm run check` z kořene (golden testy + `tsc`).

@@ -11,6 +11,7 @@
     "test": "npm test -w @lasermania/js-demo",
     "check": "npm test && npm run typecheck",
     "data": "npm run data -w @lasermania/js-demo",
+    "sound": "npm run sound -w @lasermania/js-demo",
     "golden:record": "npm run golden:record -w @lasermania/js-demo",
     "demo:single": "npm run single -w @lasermania/js-demo",
     "compare": "npm run compare -w @lasermania/js-demo --",

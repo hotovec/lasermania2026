@@ -85,4 +85,14 @@ v `lm-tiles.js`, znak podle směru `BEAM_CHAR = [3,2,2,5,5,4,4,3]`, glyf `beamGl
 - Přehrávač CMC na `$8900` (init `$8946`, play `$8903` voláno z VBI 50×/s), data na `$7700`
   (= `msx/7700_lm_music.cmc.dat`). Init: `A=$70, X=$00, Y=$77`; skladba: `A=$00, X=pozice`; ticho `A=$40`.
 - Skladby: **3 = titulka** (`$6E3A`), **ve hře 1 a 2** střídané po 4 levelech (`$9897`: level n s `n & 4` → 2, jinak 1).
+- Smyčky (registry POKEY po snímcích VBI jsou od snímku `start` periodické; `render_music.js` `findLoop`):
+
+  | Skladba | Úvod (snímky / s) | Smyčka (snímky / s) |
+  | --- | --- | --- |
+  | 1 | 1152 / 23,105 | 8640 / 173,285 |
+  | 2 | 768 / 15,403 | 10368 / 207,942 |
+  | 3 | 192 / 3,851 | 5376 / 107,822 |
+
+  Skladba 0 = 2 a 1 za sebou (768 + 20736). Na švu je stejný sled not, jen jiná fáze čítačů POKEY (vzorky se
+  neshodují, obálka ano).
 - Originál **nemá zvukové efekty**. Efekty v demu jsou nové (`SFXPlayer` v `atari-audio.js`, druhý POKEY).

@@ -22,7 +22,7 @@ server není potřeba). Bez internetu se jen použije náhradní písmo.
 | `data/lasermania.json` | stejná data jako `js/data.js`, pro import `@lasermania/js-demo/data.json` |
 | `golden/core.json`, `tests/` | golden otisky herní logiky a test (`npm test`) |
 | `tools/build_data.py` | znovu vygeneruje `js/data.js` a `data/lasermania.json` z `../original-sources` |
-| `tools/render_music.js` | vyrenderuje hudbu nebo efekt do WAV v Node |
+| `tools/render_music.js` | vyrenderuje hudbu nebo efekt do WAV v Node; `--all` = zvuk pro port do `data/sound/` (`npm run sound`), `--seam n` = šev smyčky |
 | `tools/compare_screen.js` | porovná referenční render (`lm-tiles.js`) a snímek portu se screenshoty originálu (`npm run compare` z kořene) |
 | `tools/record_golden.js` | nahraje nové golden otisky (jen po vědomé změně logiky) |
 | `prototypes/` | první port rutiny laseru (`laser.js`) a jeho ASCII test |
@@ -79,6 +79,8 @@ player.generate(float32Buffer); // vyplní buffer vzorky (mono, -1..1)
 ```sh
 node tools/render_music.js 1 60 hra.wav
 node tools/render_music.js sfx:explode 2 vybuch.wav
+node tools/render_music.js --seam 1 sev.wav     # 5 s před koncem smyčky + 5 s od jejího začátku
+node tools/render_music.js --all                # OGG + MP3 skladeb 1-3, music.json, sfx/*.wav
 ```
 
 ## Poznámky

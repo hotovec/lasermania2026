@@ -36,9 +36,16 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
   dvě rychlá ťuknutí = 2, náraz, tlačení zrcadla, výhra (fixture
   `setTile`/`setTank`), konec; snímky M1–M3 beze změny. Ručně: level 00 dohrán klávesnicí, výhra přepnula na
   další level (uživatel). Gamepad netestovaný (uživatel ho nemá, headless ho nenasimuluje).
-- [ ] **M5 Hudba a efekty** – detekce bodu smyčky CMC, render skladeb 1, 2, 3 do OGG + MP3,
+- [x] **M5 Hudba a efekty** – detekce bodu smyčky CMC, render skladeb 1, 2, 3 do OGG + MP3,
   `BT.musicPlay` s `loopStart/loopEnd`, skladba podle levelu; efekty do WAV → `BT.soundPlay`
   na `LMCore.takeEvents()`.
   *Ověření:* render v Node (`js-demo/tools/render_music.js`), přehrání v prohlížeči.
+  *Stav:* `npm run sound` (`render_music.js --all`) najde smyčky (1: 23,1 + 173,3 s, 2: 15,4 + 207,9 s, 3: 3,9 +
+  107,8 s), vyrenderuje `js-demo/data/sound/` (OGG + MP3 přes `wasm-media-encoders`, `music.json`, 13 efektů WAV),
+  export `@lasermania/js-demo/sound/*`. Kontrola švu: rozdíl obálky 3–18 %, o 1 snímek vedle 38–62 %;
+  `render_music.js --seam n` = 10 s WAV kolem švu na poslech. Port `src/sound.ts`: skladba podle levelu (`n & 4`),
+  efekty na události `move` i `tick`, M / N ztlumí hudbu / efekty. `blit play` (WebGPU i Canvas 2D): po stisku
+  `audioUnlocked`, `musicPlaying`, level 0 → skladba 1, level 4 → 2, kroky → `step`, `sensor`; M/N ztlumí; snímky
+  53 levelů beze změny. Titulka (skladba 3) až v M6. Poslech v prohlížeči: uživatel.
 - [ ] **M6 UI** – stavový řádek (originální `8400_statusbar.fnt`), editor (pointer), případně HTML kolem canvasu.
 - [ ] **M7 Doladění** – CRT efekty jen na WebGPU, test `?backend=software`, Safari (MP3), build a nasazení.
