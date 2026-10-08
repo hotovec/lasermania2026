@@ -1,8 +1,12 @@
 // Porovná snímek hrací plochy se screenshotem originálu (original-sources/levels/atari*.tiff).
 //   node tools/compare_screen.js <level> [capture.png] [--diff out.png]
-// Reference = mapa levelu po createState (s východem a emitorem) z lm-tiles.js (stejné indexy jako js-demo), umístěná jako v portu.
-// Výřez screenshotu 320×240 od x=32 (hrací plocha 256×192 na (32,12), jako v originále).
-// Maska očekávaných rozdílů: tank, buňky paprsku, stavový řádek. Exit 1 při rozdílu mimo masku.
+//   node tools/compare_screen.js --all [captureDir] [--diff-dir dir]     (captureDir/l00.png … l52.png)
+// Reference = mapa levelu po createState (s východem a emitorem) + tank z lm-tiles.js (stejné indexy jako js-demo),
+// umístěná jako v portu. Výřez screenshotu 320×240 od x=32 (hrací plocha 256×192 na (32,12), jako v originále).
+// Screenshot nemusí být ze startu: data/screens.json říká, po kolika herních krocích vznikl (reference i snímek portu
+// se dělají ve stejném stavu, port přes __game.load(n, kroky)) a která políčka se liší z jiného důvodu.
+// Maska očekávaných rozdílů: buňky paprsku (M3), stavový řádek (M6). Snímek portu musí s referencí souhlasit vždy
+// úplně. Exit 1 při jiném rozdílu.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -72,11 +76,26 @@ export function writePng(file, { width, height, rgb }) {
 }
 
 // ---- reference, screenshot, maska ----
-export function referenceFrame(level) {
-  const tiles = LMTiles.decodeTiles(LMTiles.b64(DATA.font1), LMTiles.b64(DATA.font2));
-  const pf = LMTiles.renderPlayfield(tiles, LMCore.createState(level).pf), rgbPal = LMTiles.PAL.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const REF_PAL = [...LMTiles.PAL, ...LMTiles.TANK_PAL].map(hexRgb);   // indexy renderPlayfield: 0–4 dlaždice, 5–6 tank
+let TILES = null, TANK_PX = null;
+
+// stav levelu po `ticks` herních krocích; při 0 krocích mapa ze startu (runLaser umí mapu změnit, např. výbuch
+// v levelu 32) a paprsek (st.cells) z runLaser na samostatném stavu
+export function levelState(level, ticks = 0) {
+  const st = LMCore.createState(level);
+  for (let k = 0; k < ticks; k++) LMCore.tick(st);
+  if (!ticks) { const beam = LMCore.createState(level); LMCore.runLaser(beam); st.cells = beam.cells; }
+  return st;
+}
+
+export function referenceFrame(level, ticks = 0) {
+  TILES ??= LMTiles.decodeTiles(LMTiles.b64(DATA.font1), LMTiles.b64(DATA.font2));
+  TANK_PX ??= LMTiles.decodeTank(LMTiles.b64(DATA.tankPmg));
+  const st = levelState(level, ticks);
+  const pf = LMTiles.renderPlayfield(TILES, st.pf, { pos: st.tank, frame: LMTiles.tankFrame(st.face), pixels: TANK_PX });
   const rgb = new Uint8Array(SCREEN_W * SCREEN_H * 3);   // mimo hrací plochu černá (pozadí)
-  for (let y = 0; y < 192; y++) for (let x = 0; x < 256; x++) rgb.set(rgbPal[pf[y * 256 + x]], ((PF_Y + y) * SCREEN_W + PF_X + x) * 3);
+  for (let y = 0; y < 192; y++) for (let x = 0; x < 256; x++) rgb.set(REF_PAL[pf[y * 256 + x]], ((PF_Y + y) * SCREEN_W + PF_X + x) * 3);
   return { width: SCREEN_W, height: SCREEN_H, rgb };
 }
 
@@ -87,51 +106,87 @@ export function screenshotFrame(level) {
   return { width: SCREEN_W, height: SCREEN_H, rgb };
 }
 
-// 1 = očekávaný rozdíl (tank, paprsek, stavový řádek a vše pod hrací plochou)
-export function expectedMask(level) {
-  const m = new Uint8Array(SCREEN_W * SCREEN_H), st = LMCore.createState(level);
-  LMCore.runLaser(st);
+// 1 = očekávaný rozdíl (paprsek, stavový řádek a vše pod hrací plochou)
+export function expectedMask(level, ticks = 0) {
+  const m = new Uint8Array(SCREEN_W * SCREEN_H), st = levelState(level, ticks);
   const box = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) m.fill(1, y * SCREEN_W + x0, y * SCREEN_W + x0 + w); };
-  box(PF_X + (st.tank & 15) * 16, PF_Y + (st.tank >> 4) * 16, 16, 16);
   for (const c of st.cells) box(PF_X + c.x * 8, PF_Y + c.y * 8, 8, 8);
   box(0, STATUS_Y, SCREEN_W, SCREEN_H - STATUS_Y);
   return m;
 }
 
-export function diff(a, b, mask) {
-  const r = { outside: 0, inside: 0 };
+const same = (a, b, o) => a.rgb[o] === b.rgb[o] && a.rgb[o + 1] === b.rgb[o + 1] && a.rgb[o + 2] === b.rgb[o + 2];
+const tileOf = i => { const x = (i % SCREEN_W) - PF_X, y = Math.floor(i / SCREEN_W) - PF_Y;
+  return x >= 0 && x < 256 && y >= 0 && y < 192 ? (y >> 4) * 16 + (x >> 4) : -1; };
+
+// rozdíly: mimo masku / v masce / povolené výjimkou (políčka `allowed`); `tiles` = políčka s nepovoleným rozdílem
+export function diff(a, b, mask, allowed = new Set()) {
+  const r = { outside: 0, inside: 0, allowed: 0, tiles: new Set() };
   for (let i = 0; i < a.width * a.height; i++) {
-    const o = i * 3;
-    if (a.rgb[o] !== b.rgb[o] || a.rgb[o + 1] !== b.rgb[o + 1] || a.rgb[o + 2] !== b.rgb[o + 2]) r[mask?.[i] ? 'inside' : 'outside']++;
+    if (same(a, b, i * 3)) continue;
+    if (mask?.[i]) { r.inside++; continue; }
+    const t = tileOf(i);
+    if (allowed.has(t)) { r.allowed++; continue; }
+    r.outside++; r.tiles.add(t);
   }
   return r;
 }
 
-// rozdílový obrázek: shoda ztmavená, rozdíl mimo masku červeně, uvnitř masky žlutě
-function diffImage(a, b, mask) {
+// rozdílový obrázek: shoda ztmavená, nepovolený rozdíl červeně, v masce žlutě, výjimka modře
+function diffImage(a, b, mask, allowed = new Set()) {
   const rgb = new Uint8Array(a.rgb.length);
   for (let i = 0; i < a.width * a.height; i++) {
-    const o = i * 3, same = a.rgb[o] === b.rgb[o] && a.rgb[o + 1] === b.rgb[o + 1] && a.rgb[o + 2] === b.rgb[o + 2];
-    rgb.set(same ? [a.rgb[o] >> 2, a.rgb[o + 1] >> 2, a.rgb[o + 2] >> 2] : mask[i] ? [255, 220, 0] : [255, 0, 0], o);
+    const o = i * 3;
+    rgb.set(same(a, b, o) ? [a.rgb[o] >> 2, a.rgb[o + 1] >> 2, a.rgb[o + 2] >> 2]
+      : mask[i] ? [255, 220, 0] : allowed.has(tileOf(i)) ? [60, 140, 255] : [255, 0, 0], o);
   }
   return { width: a.width, height: a.height, rgb };
 }
 
 const DATA = JSON.parse(fs.readFileSync(new URL('../data/lasermania.json', import.meta.url), 'utf8'));
+const SCREENS = JSON.parse(fs.readFileSync(new URL('../data/screens.json', import.meta.url), 'utf8')).levels;
+export const screenTicks = n => SCREENS[n]?.ticks ?? 0;
+export const allowedTiles = n => new Set((SCREENS[n]?.tiles ?? []).map(([c, r]) => r * 16 + c));
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const args = process.argv.slice(2), di = args.indexOf('--diff'), diffFile = di >= 0 ? args.splice(di, 2)[1] : null;
-  const here = f => path.resolve(process.env.INIT_CWD ?? process.cwd(), f);   // npm run z kořene běží v js-demo/
-  const [levelArg, captureFile] = args, level = DATA.levels[Number(levelArg ?? 0)];
-  const ref = referenceFrame(level), shot = screenshotFrame(level), mask = expectedMask(level);
-  const rows = [['reference vs. screenshot', diff(ref, shot, mask)]];
+function compareLevel(n, captureFile, diffFile) {
+  const level = DATA.levels[n], ticks = screenTicks(n);
+  const ref = referenceFrame(level, ticks), shot = screenshotFrame(level), mask = expectedMask(level, ticks);
+  const allowed = allowedTiles(n), rows = [['reference vs. screenshot', diff(ref, shot, mask, allowed)]];
   let cap = null;
   if (captureFile) {
-    cap = readPng(fs.readFileSync(here(captureFile)));
-    if (cap.width !== SCREEN_W || cap.height !== SCREEN_H) { console.error(`capture má ${cap.width}×${cap.height}, čekám ${SCREEN_W}×${SCREEN_H}`); process.exit(1); }
-    rows.push(['capture vs. reference', diff(cap, ref, null)], ['capture vs. screenshot', diff(cap, shot, mask)]);
+    cap = readPng(fs.readFileSync(captureFile));
+    if (cap.width !== SCREEN_W || cap.height !== SCREEN_H) throw new Error(`${captureFile}: ${cap.width}×${cap.height}, čekám ${SCREEN_W}×${SCREEN_H}`);
+    rows.push(['capture vs. reference', diff(cap, ref, null)], ['capture vs. screenshot', diff(cap, shot, mask, allowed)]);
   }
-  for (const [name, r] of rows) console.log(`${name.padEnd(26)} mimo masku ${String(r.outside).padStart(6)}   v masce ${r.inside}`);
-  if (diffFile) { writePng(here(diffFile), diffImage(cap ?? ref, shot, mask)); console.log(`rozdíl uložen: ${here(diffFile)}`); }
-  process.exit(rows.some(([, r]) => r.outside) ? 1 : 0);
+  if (diffFile) writePng(diffFile, diffImage(cap ?? ref, shot, mask, allowed));
+  return rows;
+}
+
+const fmtTiles = (r, pf) => [...r.tiles].filter(t => t >= 0).sort((x, y) => x - y)
+  .map(t => `[${t & 15},${t >> 4}]=$${pf[t].toString(16).padStart(2, '0')}`).join(' ') + (r.tiles.has(-1) ? ' mimo plochu' : '');
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = process.argv.slice(2), opt = name => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : null; };
+  const here = f => f && path.resolve(process.env.INIT_CWD ?? process.cwd(), f);   // npm run z kořene běží v js-demo/
+  const diffFile = here(opt('--diff')), diffDir = here(opt('--diff-dir')), all = args[0] === '--all';
+  let failed = false;
+  if (all) {
+    const capDir = here(args[1]);
+    if (diffDir) fs.mkdirSync(diffDir, { recursive: true });
+    for (let n = 0; n < DATA.levels.length; n++) {
+      const id = 'l' + String(n).padStart(2, '0');
+      const rows = compareLevel(n, capDir && path.join(capDir, id + '.png'), diffDir && path.join(diffDir, id + '-diff.png'));
+      const pf = levelState(DATA.levels[n], screenTicks(n)).pf;
+      const bad = rows.filter(([, r]) => r.outside);
+      failed ||= bad.length > 0;
+      const ticks = screenTicks(n), allowed = (ticks ? ` (po ${ticks} krocích)` : '') + (rows[0][1].allowed ? ` (výjimka ${rows[0][1].allowed} px)` : '');
+      console.log(`${id} ${bad.length ? 'ROZDÍL' : 'ok    '}${allowed}` + bad.map(([name, r]) => `\n     ${name}: ${r.outside} px ${fmtTiles(r, pf)}`).join(''));
+    }
+  } else {
+    const n = Number(args[0] ?? 0), rows = compareLevel(n, here(args[1]), diffFile);
+    for (const [name, r] of rows) console.log(`${name.padEnd(26)} mimo masku ${String(r.outside).padStart(6)}   v masce ${r.inside}   výjimka ${r.allowed}`);
+    if (diffFile) console.log(`rozdíl uložen: ${diffFile}`);
+    failed = rows.some(([, r]) => r.outside);
+  }
+  process.exit(failed ? 1 : 0);
 }

@@ -1,4 +1,4 @@
-// Lasermania – grafika: dlaždice z originálních fontů, animované znaky paprsku, sprite tanku.
+// Lasermania – grafika: dlaždice z originálních fontů, animované znaky paprsku, tank z PMG dat.
 // Potřebuje LM_DATA (data.js), LMCore (lm-core.js) a LMTiles (lm-tiles.js).
 (function (root) {
 'use strict';
@@ -20,11 +20,14 @@ function tileCanvas(code) {
 }
 const ATLAS = Array.from({ length: 64 }, (_, i) => tileCanvas(i));
 
-const TANK = (() => {   // sprite tanku (PMG), míří doprava
+// tank: 16 originálních PMG snímků (lm-tiles.js), index snímku z LMTiles.tankFrame(face, fáze, zablokovaný)
+const { TANK_PAL, tankFrame } = root.LMTiles;
+const TANK_PX = root.LMTiles.decodeTank(b64(D.tankPmg));
+const TANK = Array.from({ length: root.LMTiles.TANK_FRAMES }, (_, f) => {
   const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
-  D.tank.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') { g.fillStyle = ch === 'Y' ? '#dfd777' : '#c96ed7'; g.fillRect(x, y, 1, 1); } }));
+  for (let i = 0; i < 256; i++) { const v = TANK_PX[f * 256 + i]; if (v) { g.fillStyle = TANK_PAL[v - 1]; g.fillRect(i & 15, i >> 4, 1, 1); } }
   return c;
-})();
+});
 
 // ---- animace paprsku: VBI ($9BBA) kopíruje každé 4 snímky 16 bajtů z L_9F79 ($9F7A + fáze*16) do znaků 2–5 ----
 const BEAM_ANIM = [
@@ -63,9 +66,7 @@ function render(ctx, st, time, opts) {
       for (let r = 0; r < 8; r++) ctx.fillRect(x0 + (slash ? (7 - r) >> 1 : r >> 1) * 2 * SC, y0 + r * SC, 2 * SC, SC);
     }
   }
-  const tx = (st.tank & 15) * 16 * SC, ty = (st.tank >> 4) * 16 * SC, half = 8 * SC;
-  ctx.save(); ctx.translate(tx + half, ty + half); ctx.rotate([-Math.PI/2, Math.PI, Math.PI/2, 0][st.face]);
-  ctx.drawImage(TANK, -half, -half, 16 * SC, 16 * SC); ctx.restore();
+  ctx.drawImage(TANK[tankFrame(st.face)], (st.tank & 15) * 16 * SC, (st.tank >> 4) * 16 * SC, 16 * SC, 16 * SC);
   if (opts.grid) {
     for (let gx = 0; gx <= 2*W; gx++) { ctx.fillStyle = gx % 2 ? 'rgba(169,174,224,.18)' : 'rgba(169,174,224,.45)'; ctx.fillRect(gx * 8 * SC, 0, 1, cv.height); }
     for (let gy = 0; gy <= 2*H; gy++) { ctx.fillStyle = gy % 2 ? 'rgba(169,174,224,.18)' : 'rgba(169,174,224,.45)'; ctx.fillRect(0, gy * 8 * SC, cv.width, 1); }
@@ -85,5 +86,5 @@ function renderBeamPreview(ctx, time) {
   }
 }
 
-root.LMGraphics = { PAL, ATLAS, TANK, BEAM_GLYPH, beamFrame, render, renderBeamPreview };
+root.LMGraphics = { PAL, ATLAS, TANK, tankFrame, BEAM_GLYPH, beamFrame, render, renderBeamPreview };
 })(window);

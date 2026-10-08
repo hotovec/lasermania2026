@@ -147,13 +147,17 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
 - Logika, data a zvuk se **importují** z referenčního dema, nepřepisují se: `@lasermania/js-demo/core` (typy
   `GameState`, `LevelData`), `@lasermania/js-demo/audio`, `@lasermania/js-demo/data.json`. Funkční vzor grafiky je
   `../js-demo/js/lm-graphics.js`.
-- Dlaždice: `@lasermania/js-demo/tiles` (`decodeTiles` → indexy 0–4, slot = index + 1), hrací plocha na (32, 12).
-  Ověření snímku (z kořene): `npm run shot -- lasermania-blit386/screenshots/x.png [--backend software]`,
-  pak `npm run compare -- <level> lasermania-blit386/screenshots/x.png [--diff d.png]`.
+- Dlaždice: `@lasermania/js-demo/tiles` (`decodeTiles` → indexy 0–4, slot = index + 1), hrací plocha na (32, 12). Tank:
+  `decodeTank` (16 PMG snímků, sloty 6–7), snímek `tankFrame(state.face)`.
+- Výběr levelu PageDown / PageUp, restart R. Dev hook `window.__game` (`state()`, `load(n, kroky)` = zmrazený stav).
+  Ověření snímku (z kořene): `npm run shot -- lasermania-blit386/screenshots/x.png [--backend software]`, pak
+  `npm run compare -- <level> lasermania-blit386/screenshots/x.png [--diff d.png]`. Všechny levely ve stavu screenshotů:
+  `npm run shot -- --all lasermania-blit386/screenshots/all`, pak
+  `npm run compare -- --all lasermania-blit386/screenshots/all`.
 - `configure()`: `displaySize` 320×240, `targetFPS: 50` (PAL). Herní krok `LMCore.tick()` každých 8 ticků.
 - Fáze animace paprsku: `(BT.ticks & 0x0C) >> 2`; glyfy a znak podle směru viz `../project/docs/game-data.md`.
 - Paleta: slot 0 průhledný, 1 černá, 2–5 = PF0–PF3, 6–7 tank. Barevný bit dlaždic z `INV_ORIG`, ne z `TYPES`.
-- `drawSprite` v 1.7.1 neumí rotaci → tank = 4 předkreslené směry.
+- `drawSprite` v 1.7.1 neumí rotaci → tank = originální PMG snímky směrů (nic se neotáčí).
 - Hudba se předrenderuje (`../js-demo/tools/render_music.js`) a hraje přes `BT.musicPlay` se smyčkou. Titulka skladba 3,
   ve hře 1/2 podle `(level & 4)`. Efekty: `LMCore.takeEvents(state)` → `BT.soundPlay`.
 - API ověřuj v `node_modules/blit386/dist/blit386.d.ts` (v monorepu je node_modules v kořeni: `../node_modules/`).

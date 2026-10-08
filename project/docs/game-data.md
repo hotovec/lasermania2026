@@ -7,8 +7,10 @@ Vše se generuje z `original-sources/` skriptem `js-demo/tools/build_data.py` (`
 | --- | --- | --- |
 | `font1`, `font2` | `a400_ingame1.fnt`, `a800_ingame2.fnt` | fonty dlaždic (horní / dolní řádek), base64 |
 | `levels[]` | `compression/levels.xex` | 53 levelů `{n, pf, meta, image}` |
-| `tank` | screenshot | sprite tanku 16×16 (`Y` žlutá, `P` růžová), míří doprava |
+| `tankPmg` | `tool_stuff/lmdump0300` | PMG data tanku `$8700–$88FF` (P0 pak P1, 512 B), base64 |
 | `musicMem` | `tool_stuff/lmdump0300` | RAM `$7700–$8FFF`: hudba CMC + přehrávač, base64 |
+
+`lmdump0300` je RAM od `$0300`: adresa `A` je v souboru na offsetu `A - $300`.
 
 ## Levely (`levels.xex`, načteno na `$1A00`)
 
@@ -35,9 +37,24 @@ v `js-demo/js/lm-graphics.js`); herní bity jsou v obou stejné (`TYPES` v `lm-c
   PF2 `$7C` `#a9aee0`, PF3 `$96` `#2e699c`. Tank: `$A4` `#c96ed7`, `$C8` `#dfd777`.
 - Screenshoty `levels/*.tiff`: 384×240, hrací plocha 256×192 na x 64, y 12, stavový řádek y 208–231.
   Na screenshotu je mapa po `createState` (s dlaždicí východu na `meta[19]`), paprsek a tank.
-- Indexy barev dlaždic dekóduje `js-demo/js/lm-tiles.js` (`decodeTiles`), sdíleně pro demo i port.
-- Vykreslení z dat sedí na screenshoty `levels/*.tiff` pixel po pixelu (ověřeno pro všech 53 levelů,
-  rozdíly jen tam, kde screenshot není ze startu levelu).
+- Indexy barev dlaždic i tanku dekóduje `js-demo/js/lm-tiles.js` (`decodeTiles`, `decodeTank`), sdíleně pro demo
+  i port.
+- Vykreslení z dat (mapa + tank) sedí na screenshoty pixel po pixelu ve všech 53 levelech, mimo paprsek a stavový
+  řádek (`npm run compare -- --all`). 45 screenshotů je ze startu levelu, 6 přesně po K herních krocích
+  (level 2: 5, 3: 4, 22: 4, 23: 1, 24: 5, 38: 31 – paprsek mezitím zničil senzory, přerušovač, pojistku, otevřel se
+  východ). Levely 14 a 44: na screenshotu chybí ovladač dveří (14 i emitor), krokováním bez pohybu tanku to nejde
+  zopakovat. Vše v `js-demo/data/screens.json`.
+- Pozor: už první `runLaser` může mapu změnit (level 32: výbuch); screenshot ze startu ukazuje mapu před ním.
+
+## Tank (PMG, `$8700` P0 žlutá, `$8800` P1 růžová)
+
+- 16 snímků po 16 B: 16 řádků, 8 bitů na řádek, pixel dvojitě široký → 16×16. Bity P0 a P1 se nepřekrývají.
+- Snímek (`$9C60`): `(směr | zablokovaný·4)·2 + fáze`, směr originálu (`ZP_96`) 0 doprava, 1 doleva, 2 nahoru,
+  3 dolů; fáze pásů `(ZP_99 >> 2) & 1` při pohybu, zablokovaný (`ZP_AB`) = tank přirážející do překážky
+  (snímky 8–15, posunuté). `LMTiles.tankFrame(face, fáze, zablokovaný)` převádí `GameState.face`
+  (0 nahoru, 1 doleva, 2 dolů, 3 doprava).
+- Snímek 0 (doprava, stojí) přesně odpovídá tanku na screenshotech. `buld-p0/p1.dat` v `original-sources`
+  jsou jiná data (remake), nepoužívat.
 
 ## Animace paprsku
 
@@ -51,4 +68,3 @@ v `lm-graphics.js`, znak podle směru `BEAM_CHAR = [3,2,2,5,5,4,4,3]`.
   (= `msx/7700_lm_music.cmc.dat`). Init: `A=$70, X=$00, Y=$77`; skladba: `A=$00, X=pozice`; ticho `A=$40`.
 - Skladby: **3 = titulka** (`$6E3A`), **ve hře 1 a 2** střídané po 4 levelech (`$9897`: level n s `n & 4` → 2, jinak 1).
 - Originál **nemá zvukové efekty**. Efekty v demu jsou nové (`SFXPlayer` v `atari-audio.js`, druhý POKEY).
-- Tank PMG data v originále `$8700–$88FF` (4 směry) – zatím nevytažená, demo otáčí jeden sprite.

@@ -12,20 +12,22 @@ server není potřeba). Bez internetu se jen použije náhradní písmo.
 | Soubor | Obsah |
 | --- | --- |
 | `index.html`, `css/style.css` | stránka a vzhled |
-| `js/data.js` | vygenerovaná data: fonty dlaždic, levely, sprite tanku, RAM s hudbou a přehrávačem (`window.LM_DATA`) |
+| `js/data.js` | vygenerovaná data: fonty dlaždic, levely, PMG data tanku, RAM s hudbou a přehrávačem (`window.LM_DATA`) |
 | `js/lm-core.js` | herní logika bez DOMu: laser (`run_laser`), dveře, senzory, tank, dekodér levelů (`window.LMCore`, v Node `require`) |
+| `js/lm-tiles.js` | dlaždice a tank jako indexy barev bez DOMu, sdílené s portem (`window.LMTiles`, `@lasermania/js-demo/tiles`) |
 | `js/lm-graphics.js` | dlaždice z fontů (ANTIC mód 4), animované znaky paprsku, vykreslení (`window.LMGraphics`) |
 | `js/atari-audio.js` | emulátor 6502 + POKEY a přehrávač CMC (`window.AtariAudio`, v Node `require`) |
 | `js/game.js` | UI: výběr levelu, editor, ovládání, hudba |
-| `esm/core.js`, `esm/audio.js` (+ `.d.ts`) | ES modulové vstupy pro ostatní části monorepa (`@lasermania/js-demo/core`, `/audio`) |
+| `esm/core.js`, `esm/audio.js`, `esm/tiles.js` (+ `.d.ts`) | ES modulové vstupy pro ostatní části monorepa (`@lasermania/js-demo/core`, `/audio`, `/tiles`) |
 | `data/lasermania.json` | stejná data jako `js/data.js`, pro import `@lasermania/js-demo/data.json` |
 | `golden/core.json`, `tests/` | golden otisky herní logiky a test (`npm test`) |
 | `tools/build_data.py` | znovu vygeneruje `js/data.js` a `data/lasermania.json` z `../original-sources` |
 | `tools/render_music.js` | vyrenderuje hudbu nebo efekt do WAV v Node |
+| `tools/compare_screen.js` | porovná referenční render (`lm-tiles.js`) a snímek portu se screenshoty originálu (`npm run compare` z kořene) |
 | `tools/record_golden.js` | nahraje nové golden otisky (jen po vědomé změně logiky) |
 | `prototypes/` | první port rutiny laseru (`laser.js`) a jeho ASCII test |
 
-Pořadí skriptů v `index.html` je důležité: data → zvuk → logika → grafika → UI. Skripty jsou
+Pořadí skriptů v `index.html` je důležité: data → zvuk → logika → dlaždice → grafika → UI. Skripty jsou
 klasické (ne ES moduly), aby fungovaly i z `file://`.
 
 ## Data
@@ -82,7 +84,7 @@ node tools/render_music.js sfx:explode 2 vybuch.wav
 ## Poznámky
 
 - Laser, odrazy a animace paprsku odpovídají originálu (tabulky `L_A390`, `L_A398`, `L_A3D0`, `L_9F79`).
-- Pohyb tanku je skokový, originál ho plynule animuje.
+- Pohyb tanku je skokový, originál ho plynule animuje (snímky pásů a „zablokovaný“ tank jsou v PMG datech, demo kreslí jen fázi 0).
 - Zvukové efekty originál nemá; demo je generuje druhým emulovaným POKEY (`AtariAudio.SFXPlayer`), spouští je události z `LMCore.takeEvents()`.
 - Emulace POKEY je zjednodušená, hudba nezní úplně stejně jako na skutečném Atari.
 - `$22` zafixuje délku paprsku, která pak každý krok klesá; na nule emitor vybuchne. Kapsle délku obnoví.

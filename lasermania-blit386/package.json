@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-        "shot": "node scripts/shot-display.mjs",
+    "shot": "node scripts/shot-display.mjs",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write . && prettier --write \"**/*.{md,mdx,mdc,yml,yaml}\"",
     "format:check": "biome format . && prettier --check \"**/*.{md,mdx,mdc,yml,yaml}\"",

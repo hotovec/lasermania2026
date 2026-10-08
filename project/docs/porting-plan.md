@@ -13,9 +13,14 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
   (`npm run shot -- lasermania-blit386/screenshots/l00.png [--backend software]`) = reference pixel po pixelu na WebGPU i Canvas 2D;
   proti screenshotu 0 rozdílů mimo masku tanku, paprsku a stavového řádku
   (`npm run compare -- 0 lasermania-blit386/screenshots/l00.png --diff …`).
-- [ ] **M2 Všech 53 levelů** – výběr levelu, tank (4 směry; ideálně PMG data z dumpu `$8700–$88FF`).
+- [x] **M2 Všech 53 levelů** – výběr levelu, tank (4 směry; ideálně PMG data z dumpu `$8700–$88FF`).
   *Ověření:* skript projde všechny levely a porovná snímky se screenshoty (očekávané rozdíly: tank, paprsek,
   prvky zničené na screenshotu).
+  *Stav:* tank z PMG dat dumpu (16 snímků, demo i port), PageDown/PageUp/R, dev hook `__game.load(n, kroky)`.
+  `npm run shot -- --all lasermania-blit386/screenshots/all [--backend software]` + `npm run compare -- --all
+  lasermania-blit386/screenshots/all`: snímek portu = reference ve všech 53 levelech na WebGPU i Canvas 2D;
+  proti screenshotům 0 rozdílů mimo paprsek a stavový řádek (stav screenshotů v `js-demo/data/screens.json`,
+  výjimky jen levely 14 a 44).
 - [ ] **M3 Paprsek** – 16 glyfů (4 fáze × znaky 2–5), fáze `(BT.ticks & 0x0C) >> 2`.
   *Ověření:* snímky fází proti `js-demo`.
 - [ ] **M4 Smyčka a vstup** – `Timer(8)` / `BT.ticks % 8`, `BT.isPressed`, gamepad, výhra → další level.

@@ -2,6 +2,18 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Tank z PMG dat dumpu, demo i port.** `build_data.py` bere `$8700–$88FF` z `lmdump0300`
+  (`tankPmg`), `lm-tiles.js` dekóduje 16 snímků; demo přestalo sprite otáčet, ruční přepis `tank` ze screenshotu
+  zmizel. Důvod: originální snímky pro všechny směry (a pro M4 fáze pásů), demo a port kreslí stejné pixely.
+- **2026-10-08 Výběr levelu PageDown / PageUp, restart R.** Originál má jen joystick; šipky a WASD zůstávají
+  pro tank (M4). Cyklicky přes 53 levelů jako tlačítka v demu.
+- **2026-10-08 Dev hook `window.__game`.** Jen při `BT.isDevMode`: `state()` pro `blit play state`,
+  `load(n, kroky)` provede kroky a zastaví logiku. Důvod: deterministické snímky pro porovnání (logika jinak
+  běží dál a už první krok mění mapu).
+- **2026-10-08 Stav screenshotů v `js-demo/data/screens.json`.** Počet herních kroků, po kterém screenshot
+  přesně odpovídá (nalezeno prohledáním 0–300 kroků), místo seznamu ignorovaných políček; políčka jen tam, kde
+  stav nejde zopakovat (14, 44). Export `@lasermania/js-demo/screens.json` pro skript portu.
+
 - **2026-10-08 Dlaždice sdílí `js-demo/js/lm-tiles.js`.** Čistý klasický skript (bez DOM): `INV_ORIG`, `PAL`,
   `decodeTiles` → indexy 0–4, `renderPlayfield`. Demo z indexů dělá canvasy, port sheet přes
   `SpriteSheet.fromIndexedPixels` (index v → paletový slot v + 1). Důvod: zákaz kopírování kódu mezi částmi.

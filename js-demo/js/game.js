@@ -54,7 +54,7 @@ const pal = $('palette');
 TOOLS.forEach(([code, label]) => {
   const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', code === tool);
   const ic = document.createElement('canvas'); ic.width = 16; ic.height = 16;
-  const g = ic.getContext('2d'); if (code === 'tank') g.drawImage(G.TANK, 0, 0); else if (code) g.drawImage(G.ATLAS[code], 0, 0);
+  const g = ic.getContext('2d'); if (code === 'tank') g.drawImage(G.TANK[G.tankFrame(3)], 0, 0); else if (code) g.drawImage(G.ATLAS[code], 0, 0);
   b.append(ic, document.createTextNode(label));
   b.addEventListener('click', () => { tool = code; pal.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   pal.append(b);

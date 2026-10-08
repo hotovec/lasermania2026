@@ -1,6 +1,6 @@
 // Lasermania pro BLIT386.
 //
-// Herní logika, data a dlaždice se importují z referenčního dema (balíček @lasermania/js-demo ve
+// Herní logika, data, dlaždice a tank se importují z referenčního dema (balíček @lasermania/js-demo ve
 // složce ../js-demo). Logika běží v update() ve stejném taktu jako originál (50 Hz, herní krok
 // každých 8 snímků). Stav portu viz ../project/docs/porting-plan.md a "Your notes" v CLAUDE.md.
 
@@ -16,6 +16,9 @@ const C_PF0 = 2;
 const C_PF1 = 3;
 const C_PF2 = 4;
 const C_PF3 = 5;
+// Tank (PMG): index 1 = P0 žlutá $C8, 2 = P1 růžová $A4 -> sloty 6 a 7.
+const C_TANK_P0 = 6;
+const C_TANK_P1 = 7;
 
 const GAME_STEP_TICKS = 8; // herní smyčka originálu: 8 snímků = 160 ms
 
@@ -25,11 +28,29 @@ const PF_Y = 12;
 const TILE = LMTiles.TILE;
 const SHEET_COLS = 8; // sheet 128x128 = 8x8 dlaždic
 
+// Výběr levelu (originál má jen joystick): PageDown další, PageUp předchozí, R restart.
+const KEY_NEXT = 'PageDown';
+const KEY_PREV = 'PageUp';
+const KEY_RESTART = 'KeyR';
+
+/**
+ * Dev hook pro `npx blit play` (krok `state`, `eval:__game.load(n, kroky)`), jen v dev režimu.
+ * `load(n, steps)` provede `steps` herních kroků a logiku zastaví (deterministický snímek pro porovnání
+ * se screenshotem, viz ../js-demo/data/screens.json). Klávesy výběru levelu logiku zase pustí.
+ */
+interface DevHook {
+    state(): { level: number; tank: number; face: number; frozen: boolean; ticks: number };
+    load(n: number, steps?: number): void;
+}
+
 class Game {
     private state!: GameState;
     private levelNo = 0;
+    private frozen = false; // jen dev hook: logika stojí
     private tiles!: SpriteSheet;
     private tileRects: Rect2i[] = [];
+    private tank!: SpriteSheet;
+    private tankRects: Rect2i[] = [];
     private cellPos: Vector2i[] = [];
 
     configure() {
@@ -47,6 +68,8 @@ class Game {
         palette.set(C_PF1, new Color32(0x24, 0x62, 0x00, 255));
         palette.set(C_PF2, new Color32(0xa9, 0xae, 0xe0, 255));
         palette.set(C_PF3, new Color32(0x2e, 0x69, 0x9c, 255));
+        palette.set(C_TANK_P0, new Color32(0xdf, 0xd7, 0x77, 255));
+        palette.set(C_TANK_P1, new Color32(0xc9, 0x6e, 0xd7, 255));
         BT.paletteSet(palette);
 
         this.tiles = this.buildTileSheet();
@@ -57,8 +80,37 @@ class Game {
             this.cellPos.push(new Vector2i(PF_X + (i % LMCore.W) * TILE, PF_Y + Math.floor(i / LMCore.W) * TILE));
         }
 
-        this.state = LMCore.createState(data.levels[this.levelNo]);
+        this.tank = this.buildTankSheet();
+        for (let f = 0; f < LMTiles.TANK_FRAMES; f++) this.tankRects.push(new Rect2i(f * TILE, 0, TILE, TILE));
+
+        this.load(0);
+        if (BT.isDevMode) {
+            const hook: DevHook = {
+                state: () => ({
+                    level: this.levelNo,
+                    tank: this.state.tank,
+                    face: this.state.face,
+                    frozen: this.frozen,
+                    ticks: BT.ticks,
+                }),
+                load: (n, steps) => {
+                    this.load(n);
+                    if (steps === undefined) return;
+                    for (let k = 0; k < steps; k++) LMCore.tick(this.state);
+                    this.frozen = true;
+                },
+            };
+            (window as unknown as { __game: DevHook }).__game = hook;
+        }
         return true;
+    }
+
+    // jako load() v js-demo/js/game.js: nový stav levelu n (cyklicky přes všechny levely)
+    private load(n: number): void {
+        const count = data.levels.length;
+        this.levelNo = ((n % count) + count) % count;
+        this.state = LMCore.createState(data.levels[this.levelNo]);
+        this.frozen = false;
     }
 
     // 64 dlaždic z originálních fontů (lm-tiles.js) do sheetu 8x8 dlaždic, index v -> slot v + 1
@@ -78,8 +130,27 @@ class Game {
         return SpriteSheet.fromIndexedPixels(size, size, pixels);
     }
 
+    // 16 PMG snímků tanku (lm-tiles.js) vedle sebe, index 1/2 -> slot C_TANK_P0/P1, 0 průhledné
+    private buildTankSheet(): SpriteSheet {
+        const src = LMTiles.decodeTank(LMTiles.b64(data.tankPmg));
+        const width = LMTiles.TANK_FRAMES * TILE;
+        const pixels = new Uint8Array(width * TILE);
+        for (let f = 0; f < LMTiles.TANK_FRAMES; f++) {
+            for (let y = 0; y < TILE; y++) {
+                for (let x = 0; x < TILE; x++) {
+                    const v = src[f * TILE * TILE + y * TILE + x];
+                    pixels[y * width + f * TILE + x] = v ? v + C_TANK_P0 - 1 : 0;
+                }
+            }
+        }
+        return SpriteSheet.fromIndexedPixels(width, TILE, pixels);
+    }
+
     update(): void {
-        if (BT.ticks % GAME_STEP_TICKS === 0) LMCore.tick(this.state);
+        if (BT.isKeyPressed(KEY_NEXT)) this.load(this.levelNo + 1);
+        else if (BT.isKeyPressed(KEY_PREV)) this.load(this.levelNo - 1);
+        else if (BT.isKeyPressed(KEY_RESTART)) this.load(this.levelNo);
+        if (!this.frozen && BT.ticks % GAME_STEP_TICKS === 0) LMCore.tick(this.state);
     }
 
     render(): void {
@@ -88,6 +159,9 @@ class Game {
         for (let i = 0; i < pf.length; i++) {
             if (pf[i]) BT.drawSprite(this.tiles, this.tileRects[pf[i] & 63], this.cellPos[i]);
         }
+        const tank = this.state.tank;
+        if (tank < pf.length)
+            BT.drawSprite(this.tank, this.tankRects[LMTiles.tankFrame(this.state.face)], this.cellPos[tank]);
     }
 }
 

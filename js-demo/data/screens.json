@@ -1,0 +1,13 @@
+{
+  "note": "Stav levelu na screenshotech original-sources/levels/atari*.tiff. ticks = počet herních kroků (LMCore.tick) od startu, po kterém screenshot přesně odpovídá; tiles = políčka [sloupec, řádek], která se liší z jiného důvodu. Neuvedený level = screenshot ze startu (0 kroků). Ověřuje tools/compare_screen.js.",
+  "levels": {
+    "2": { "ticks": 5, "reason": "paprsek už zničil senzor [5,3] a vede jinudy" },
+    "3": { "ticks": 4, "reason": "východ [14,1] se už otevřel ($30 -> $34)" },
+    "14": { "ticks": 0, "tiles": [[12, 2], [9, 5]], "reason": "na screenshotu chybí ovladač dveří [12,2] a emitor [9,5], tank na startu; krokováním bez pohybu nejde zopakovat" },
+    "22": { "ticks": 4, "reason": "východ [13,2] se už otevřel ($30 -> $34)" },
+    "23": { "ticks": 1, "reason": "paprsek už zničil přerušovač [8,4]" },
+    "24": { "ticks": 5, "reason": "pojistka [0,9] už vybuchla" },
+    "38": { "ticks": 31, "reason": "paprsek už zničil pět senzorů a vede jinudy" },
+    "44": { "ticks": 0, "tiles": [[5, 6]], "reason": "na screenshotu chybí ovladač dveří [5,6], tank na startu; krokováním bez pohybu nejde zopakovat" }
+  }
+}

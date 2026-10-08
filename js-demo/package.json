@@ -9,6 +9,7 @@
     "./tiles": { "types": "./esm/tiles.d.ts", "default": "./esm/tiles.js" },
     "./audio": { "types": "./esm/audio.d.ts", "default": "./esm/audio.js" },
     "./data.json": { "types": "./data/lasermania.d.ts", "default": "./data/lasermania.json" },
+    "./screens.json": "./data/screens.json",
     "./js/*": "./js/*"
   },
   "scripts": {

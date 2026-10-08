@@ -12,15 +12,11 @@ Použití (z kořene monorepa):
 Čte:
     a400_ingame1.fnt, a800_ingame2.fnt   originální fonty dlaždic (horní / dolní řádek)
     compression/levels.xex               data levelů (surová, načítají se na $1A00)
-    tool_stuff/lmdump0300                RAM dump originální hry od $0300 (hudba CMC $7700 + přehrávač $8900)
+    tool_stuff/lmdump0300                RAM dump originální hry od $0300 (tank PMG $8700, hudba CMC $7700 + přehrávač $8900)
 """
 import argparse, base64, json, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TANK = ['YYPPYYPPYYPP....', 'YYPPYYPPYYPP....', '..YY....PP....YY', '..PPYYYYPP....YY',
-        '..YYYYYYYY..PPYY', 'PPYYYYYYYYPPPPYY', 'YYYYYYYYYYYY..YY', 'YYYYYYYYYYPP..YY',
-        'PPYYYYYYPPPP..YY', 'PPPPPPPPPPPP..YY', 'YYPPPPPPPPYYPPYY', '..PPPPPPPP..PPYY',
-        '..YYPPPPYY....YY', '..YY....PP....YY', 'YYPPYYPPYYPP....', 'YYPPYYPPYYPP....']
 
 
 def decode_level(d, n, base=0x1A00):
@@ -63,7 +59,8 @@ def main():
         'font1': base64.b64encode(R('a400_ingame1.fnt')).decode(),
         'font2': base64.b64encode(R('a800_ingame2.fnt')).decode(),
         'levels': [decode_level(levels_bin, n) for n in nums],
-        'tank': TANK,
+        # tank: PMG data P0 (žlutá) $8700 a P1 (růžová) $8800, 16 snímků po 16 B
+        'tankPmg': base64.b64encode(dump[0x8700 - 0x300:0x8900 - 0x300]).decode(),
         'musicMem': base64.b64encode(dump[0x7700 - 0x300:0x9000 - 0x300]).decode(),
     }
     with open(a.out, 'w', encoding='utf-8') as f:
