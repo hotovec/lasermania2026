@@ -5,10 +5,14 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
 
 - [x] **M0 Start** – monorepo, šablona create-blit386 1.7.1 (TS), import logiky a dat z `js-demo` funguje
   (`npm run check`, `npm run build`, kostra v `lasermania-blit386/src/game.ts`).
-- [ ] **M1 Paleta a dlaždice** – sheet 64 dlaždic z fontů přes `SpriteSheet.fromIndexedPixels`
+- [x] **M1 Paleta a dlaždice** – sheet 64 dlaždic z fontů přes `SpriteSheet.fromIndexedPixels`
   (barevný bit z `INV_ORIG`), vykreslení mapy levelu 0.
   *Ověření:* `BT.captureFrame({ size: 'display' })` porovnat s `js-demo` (stejná data → stejné pixely)
   a se screenshotem `original-sources/levels/atari002.tiff`.
+  *Stav:* dlaždice ze sdíleného `js-demo/js/lm-tiles.js` (`@lasermania/js-demo/tiles`). Snímek portu
+  (`npm run shot -- lasermania-blit386/screenshots/l00.png [--backend software]`) = reference pixel po pixelu na WebGPU i Canvas 2D;
+  proti screenshotu 0 rozdílů mimo masku tanku, paprsku a stavového řádku
+  (`npm run compare -- 0 lasermania-blit386/screenshots/l00.png --diff …`).
 - [ ] **M2 Všech 53 levelů** – výběr levelu, tank (4 směry; ideálně PMG data z dumpu `$8700–$88FF`).
   *Ověření:* skript projde všechny levely a porovná snímky se screenshoty (očekávané rozdíly: tank, paprsek,
   prvky zničené na screenshotu).

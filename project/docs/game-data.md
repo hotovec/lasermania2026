@@ -33,6 +33,9 @@ v `js-demo/js/lm-graphics.js`); herní bity jsou v obou stejné (`TYPES` v `lm-c
   `00` pozadí, `01` PF0, `10` PF1, `11` PF2 (PF3 u inverse). Pixely jsou dvojitě široké → dlaždice 16×16.
 - Paleta PAL (barvy ověřené ze screenshotů): pozadí `#000000`, PF0 `$22` `#590f00`, PF1 `$C4` `#246200`,
   PF2 `$7C` `#a9aee0`, PF3 `$96` `#2e699c`. Tank: `$A4` `#c96ed7`, `$C8` `#dfd777`.
+- Screenshoty `levels/*.tiff`: 384×240, hrací plocha 256×192 na x 64, y 12, stavový řádek y 208–231.
+  Na screenshotu je mapa po `createState` (s dlaždicí východu na `meta[19]`), paprsek a tank.
+- Indexy barev dlaždic dekóduje `js-demo/js/lm-tiles.js` (`decodeTiles`), sdíleně pro demo i port.
 - Vykreslení z dat sedí na screenshoty `levels/*.tiff` pixel po pixelu (ověřeno pro všech 53 levelů,
   rozdíly jen tam, kde screenshot není ze startu levelu).
 

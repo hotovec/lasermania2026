@@ -2,6 +2,18 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Dlaždice sdílí `js-demo/js/lm-tiles.js`.** Čistý klasický skript (bez DOM): `INV_ORIG`, `PAL`,
+  `decodeTiles` → indexy 0–4, `renderPlayfield`. Demo z indexů dělá canvasy, port sheet přes
+  `SpriteSheet.fromIndexedPixels` (index v → paletový slot v + 1). Důvod: zákaz kopírování kódu mezi částmi.
+- **2026-10-08 Hrací plocha na (32, 12).** Displej 320×240 je výřez screenshotu originálu (384×240, plocha na
+  x 64, y 12) od x = 32, takže snímek portu jde se screenshotem porovnat 1:1; stavový řádek zůstane na y 208.
+- **2026-10-08 Ověření snímků.** `js-demo/tools/compare_screen.js` (Node, bez závislostí) porovná referenci,
+  screenshot a snímek portu s maskou tanku, paprsku a stavového řádku. Snímek portu bere
+  `lasermania-blit386/scripts/shot-display.mjs` přes `blit play` (devDependency `playwright-core`) a
+  `BT.captureFrame({ size: 'display' })` – krok `shot` v `blit play` velikost nepředává.
+- **2026-10-08 Bez ikonky overlaye.** `isOverlayToggleHintVisible: false`: ikonka v levém dolním rohu byla ve
+  snímcích. Overlay zůstává dostupný klávesou Backquote.
+
 - **2026-10-08 Monorepo s npm workspaces.** `js-demo` je balíček `@lasermania/js-demo`, port na něm závisí.
   Důvod: jediný zdroj pravdy pro logiku a data, port i demo používají stejný kód.
 - **2026-10-08 Logika zůstává klasický skript + ESM obal.** `js-demo/js/lm-core.js` se registruje jako

@@ -1,43 +1,20 @@
 // Lasermania – grafika: dlaždice z originálních fontů, animované znaky paprsku, sprite tanku.
-// Potřebuje LM_DATA (data.js) a LMCore (lm-core.js).
+// Potřebuje LM_DATA (data.js), LMCore (lm-core.js) a LMTiles (lm-tiles.js).
 (function (root) {
 'use strict';
 const { W, H, DX, DY } = root.LMCore;
 const D = root.LM_DATA;
-const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-const FONT1 = b64(D.font1);   // a400_ingame1.fnt – horní řádek znaků dlaždic
-const FONT2 = b64(D.font2);   // a800_ingame2.fnt – dolní řádek
-// bit2 ("inverse" = PF3) z ORIGINÁLNÍ tabulky element_types (lmdump0300, $5D00);
-// remake 2020 ho u několika dlaždic změnil kvůli nové grafice, herní bity jsou stejné
-const INV_ORIG = [
-  0x00,0x00,0x00,0x44,0x80,0x80,0x80,0x80,0x04,0x04,0x04,0x04,0x04,0x80,0x04,0x04,
-  0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x04,0x04,0x04,0x04,0x00,0x04,0x04,
-  0xC4,0x08,0x01,0x82,0x01,0x01,0x01,0x01,0x10,0x10,0x02,0x02,0x02,0x02,0x02,0x02,
-  0x00,0x00,0x00,0x00,0x20,0x01,0x02,0x02,0x02,0x10,0x10,0x10,0x10,0x10,0x00,0x44,
-].map(t => t & 4);
-const PAL = ['#000000', '#590f00', '#246200', '#a9aee0', '#2e699c'];   // pozadí, PF0 $22, PF1 $C4, PF2 $7C, PF3 $96
+const { PAL, b64 } = root.LMTiles;
+// 64 dlaždic jako indexy barev (lm-tiles.js), tady jen převod na canvasy přes PAL
+const TILES = root.LMTiles.decodeTiles(b64(D.font1), b64(D.font2));
+const RGB = PAL.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
 
-// ANTIC mód 4: znak 4×8 px, 2 bity na pixel (00 pozadí, 01 PF0, 10 PF1, 11 PF2 / PF3 u "inverse" znaků)
-// dlaždice t = znaky 2t a 2t+1; nahoře z FONT1, dole z FONT2
 function tileCanvas(code) {
   const c = document.createElement('canvas'); c.width = 16; c.height = 16;
-  const g = c.getContext('2d'), img = g.createImageData(16, 16), inv = INV_ORIG[code];
-  for (let half = 0; half < 2; half++) {
-    const font = half ? FONT2 : FONT1;
-    for (let cx = 0; cx < 2; cx++) {
-      const ch = (code * 2 + cx) & 0x7f;
-      for (let row = 0; row < 8; row++) {
-        const b = font[ch * 8 + row];
-        for (let px = 0; px < 4; px++) {
-          let v = (b >> (6 - 2 * px)) & 3; if (v === 3 && inv) v = 4;
-          const hex = PAL[v], r = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bl = parseInt(hex.slice(5, 7), 16);
-          for (let dx = 0; dx < 2; dx++) {
-            const o = ((half * 8 + row) * 16 + cx * 8 + px * 2 + dx) * 4;
-            img.data[o] = r; img.data[o+1] = gg; img.data[o+2] = bl; img.data[o+3] = 255;
-          }
-        }
-      }
-    }
+  const g = c.getContext('2d'), img = g.createImageData(16, 16);
+  for (let i = 0; i < 256; i++) {
+    const [r, gg, bl] = RGB[TILES[code * 256 + i]];
+    img.data[i * 4] = r; img.data[i * 4 + 1] = gg; img.data[i * 4 + 2] = bl; img.data[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0); return c;
 }

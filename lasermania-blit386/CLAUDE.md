@@ -147,6 +147,9 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
 - Logika, data a zvuk se **importují** z referenčního dema, nepřepisují se: `@lasermania/js-demo/core` (typy
   `GameState`, `LevelData`), `@lasermania/js-demo/audio`, `@lasermania/js-demo/data.json`. Funkční vzor grafiky je
   `../js-demo/js/lm-graphics.js`.
+- Dlaždice: `@lasermania/js-demo/tiles` (`decodeTiles` → indexy 0–4, slot = index + 1), hrací plocha na (32, 12).
+  Ověření snímku (z kořene): `npm run shot -- lasermania-blit386/screenshots/x.png [--backend software]`,
+  pak `npm run compare -- <level> lasermania-blit386/screenshots/x.png [--diff d.png]`.
 - `configure()`: `displaySize` 320×240, `targetFPS: 50` (PAL). Herní krok `LMCore.tick()` každých 8 ticků.
 - Fáze animace paprsku: `(BT.ticks & 0x0C) >> 2`; glyfy a znak podle směru viz `../project/docs/game-data.md`.
 - Paleta: slot 0 průhledný, 1 černá, 2–5 = PF0–PF3, 6–7 tank. Barevný bit dlaždic z `INV_ORIG`, ne z `TYPES`.
