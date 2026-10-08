@@ -21,8 +21,12 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
   lasermania-blit386/screenshots/all`: snímek portu = reference ve všech 53 levelech na WebGPU i Canvas 2D;
   proti screenshotům 0 rozdílů mimo paprsek a stavový řádek (stav screenshotů v `js-demo/data/screens.json`,
   výjimky jen levely 14 a 44).
-- [ ] **M3 Paprsek** – 16 glyfů (4 fáze × znaky 2–5), fáze `(BT.ticks & 0x0C) >> 2`.
+- [x] **M3 Paprsek** – 16 glyfů (4 fáze × znaky 2–5), fáze `(BT.ticks & 0x0C) >> 2`.
   *Ověření:* snímky fází proti `js-demo`.
+  *Stav:* glyfy ze sdíleného `lm-tiles.js` (`decodeBeam`, demo beze změny chování), pořadí dlaždice → paprsek →
+  tank. Level 0 ve 4 fázích (`__game.load(0, 0, f)`): snímek portu = reference, fáze se liší, bez zmrazení se fáze
+  mění po 4 snímcích. Všech 53 levelů (WebGPU i Canvas 2D): snímek portu = reference s paprskem; reference =
+  screenshot bez masky paprsku (`screens.json`: fáze, nedokreslený paprsek u 6 levelů).
 - [ ] **M4 Smyčka a vstup** – `Timer(8)` / `BT.ticks % 8`, `BT.isPressed`, gamepad, výhra → další level.
   *Ověření:* golden testy (`npm test`) beze změny; v prohlížeči dohrát level 00.
 - [ ] **M5 Hudba a efekty** – detekce bodu smyčky CMC, render skladeb 1, 2, 3 do OGG + MP3,

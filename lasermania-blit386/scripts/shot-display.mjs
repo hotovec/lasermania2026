@@ -2,7 +2,7 @@
 //   node scripts/shot-display.mjs <out.png> [--backend software] [--wait 3000]
 //   node scripts/shot-display.mjs --all <dir> [--backend software]     -> <dir>/l00.png … l52.png
 // `blit play shot` volá captureFrame() bez `size`, proto snímek přes eval a base64.
-// --all: každý level přes dev hook __game.load(n, kroky) ve stavu screenshotu (@lasermania/js-demo/screens.json).
+// --all: každý level přes dev hook __game.load(n, kroky, fáze) ve stavu screenshotu (@lasermania/js-demo/screens.json).
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,7 +40,8 @@ function play(steps) {
 if (all) {
     const steps = [`wait:${wait}`, 'eval:BT.activeBackend'];
     for (let n = 0; n < data.levels.length; n++) {
-        steps.push(`eval:__game.load(${n}, ${screens.levels[n]?.ticks ?? 0})`, 'wait:100', CAPTURE);
+        const s = screens.levels[n] ?? {};
+        steps.push(`eval:__game.load(${n}, ${s.ticks ?? 0}, ${s.beamPhase ?? 0})`, 'wait:100', CAPTURE);
     }
     const { active, shots } = play(steps);
     if (shots.length !== data.levels.length) throw new Error(`čekám ${data.levels.length} snímků, mám ${shots.length}`);

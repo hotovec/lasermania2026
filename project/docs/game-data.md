@@ -37,13 +37,14 @@ v `js-demo/js/lm-graphics.js`); herní bity jsou v obou stejné (`TYPES` v `lm-c
   PF2 `$7C` `#a9aee0`, PF3 `$96` `#2e699c`. Tank: `$A4` `#c96ed7`, `$C8` `#dfd777`.
 - Screenshoty `levels/*.tiff`: 384×240, hrací plocha 256×192 na x 64, y 12, stavový řádek y 208–231.
   Na screenshotu je mapa po `createState` (s dlaždicí východu na `meta[19]`), paprsek a tank.
-- Indexy barev dlaždic i tanku dekóduje `js-demo/js/lm-tiles.js` (`decodeTiles`, `decodeTank`), sdíleně pro demo
-  i port.
-- Vykreslení z dat (mapa + tank) sedí na screenshoty pixel po pixelu ve všech 53 levelech, mimo paprsek a stavový
+- Indexy barev dlaždic, glyfů paprsku i tanku dekóduje `js-demo/js/lm-tiles.js` (`decodeTiles`, `decodeBeam`,
+  `decodeTank`), sdíleně pro demo i port.
+- Vykreslení z dat (mapa + paprsek + tank) sedí na screenshoty pixel po pixelu ve všech 53 levelech, mimo stavový
   řádek (`npm run compare -- --all`). 45 screenshotů je ze startu levelu, 6 přesně po K herních krocích
   (level 2: 5, 3: 4, 22: 4, 23: 1, 24: 5, 38: 31 – paprsek mezitím zničil senzory, přerušovač, pojistku, otevřel se
   východ). Levely 14 a 44: na screenshotu chybí ovladač dveří (14 i emitor), krokováním bez pohybu tanku to nejde
-  zopakovat. Vše v `js-demo/data/screens.json`.
+  zopakovat. U 6 levelů je paprsek nedokreslený (viz Animace paprsku). Vše v `js-demo/data/screens.json`, hodnoty
+  znovu najde `node js-demo/tools/compare_screen.js --search <level>`.
 - Pozor: už první `runLaser` může mapu změnit (level 32: výbuch); screenshot ze startu ukazuje mapu před ním.
 
 ## Tank (PMG, `$8700` P0 žlutá, `$8800` P1 růžová)
@@ -60,7 +61,15 @@ v `js-demo/js/lm-graphics.js`); herní bity jsou v obou stejné (`TYPES` v `lm-c
 
 VBI (`$9BBA`) každé 4 snímky kopíruje 16 bajtů z `L_9F79` (`$9F7A + fáze*16`, fáze = `(RTCLOK & $0C) >> 2`)
 do znaků 2 a 3 (`/`, `\`) a pozpátku do znaků 4 a 5. Barvy tak tečou ve směru letu. Data: `BEAM_ANIM`
-v `lm-graphics.js`, znak podle směru `BEAM_CHAR = [3,2,2,5,5,4,4,3]`.
+v `lm-tiles.js`, znak podle směru `BEAM_CHAR = [3,2,2,5,5,4,4,3]`, glyf `beamGlyph(fáze, směr)`.
+
+- Glyf je průhledný: pixel `00` nechá vidět dlaždici pod buňkou, `01`–`11` = PF0–PF2 (PF3 nikdy).
+- Pořadí: dlaždice → paprsek → tank. Tank (PMG) má přednost před playfieldem, paprsek vede i pod tankem.
+- Na screenshotech je fáze 0–3 podle okamžiku snímku (`beamPhase` v `screens.json`).
+- Originál kreslí paprsek během `run_laser` do druhého obrazového bufferu (`ZP_84_vram2`) a VBI buffery přepíná
+  v pevném rytmu (`L_9B31_switch_buffers`). Dlouhý paprsek proto může být na obrazovce nedokreslený: screenshoty
+  levelů 0, 23, 24, 32, 44 ukazují jen prvních N buněk (19/20, 0/2, 109/122, 115/128, 1/12). Port kreslí celý
+  paprsek.
 
 ## Hudba a zvuk
 

@@ -14,8 +14,8 @@ server není potřeba). Bez internetu se jen použije náhradní písmo.
 | `index.html`, `css/style.css` | stránka a vzhled |
 | `js/data.js` | vygenerovaná data: fonty dlaždic, levely, PMG data tanku, RAM s hudbou a přehrávačem (`window.LM_DATA`) |
 | `js/lm-core.js` | herní logika bez DOMu: laser (`run_laser`), dveře, senzory, tank, dekodér levelů (`window.LMCore`, v Node `require`) |
-| `js/lm-tiles.js` | dlaždice a tank jako indexy barev bez DOMu, sdílené s portem (`window.LMTiles`, `@lasermania/js-demo/tiles`) |
-| `js/lm-graphics.js` | dlaždice z fontů (ANTIC mód 4), animované znaky paprsku, vykreslení (`window.LMGraphics`) |
+| `js/lm-tiles.js` | dlaždice, glyfy paprsku a tank jako indexy barev bez DOMu, sdílené s portem (`window.LMTiles`, `@lasermania/js-demo/tiles`) |
+| `js/lm-graphics.js` | canvasy dlaždic, paprsku a tanku z `lm-tiles.js`, vykreslení (`window.LMGraphics`) |
 | `js/atari-audio.js` | emulátor 6502 + POKEY a přehrávač CMC (`window.AtariAudio`, v Node `require`) |
 | `js/game.js` | UI: výběr levelu, editor, ovládání, hudba |
 | `esm/core.js`, `esm/audio.js`, `esm/tiles.js` (+ `.d.ts`) | ES modulové vstupy pro ostatní části monorepa (`@lasermania/js-demo/core`, `/audio`, `/tiles`) |

@@ -29,25 +29,16 @@ const TANK = Array.from({ length: root.LMTiles.TANK_FRAMES }, (_, f) => {
   return c;
 });
 
-// ---- animace paprsku: VBI ($9BBA) kopíruje každé 4 snímky 16 bajtů z L_9F79 ($9F7A + fáze*16) do znaků 2–5 ----
-const BEAM_ANIM = [
-  [0x02,0x03,0x0C,0x08,0x20,0x10,0x40,0x80, 0x80,0x40,0x10,0x20,0x08,0x0C,0x03,0x02],
-  [0x03,0x02,0x08,0x04,0x10,0x20,0x80,0xC0, 0x40,0x80,0x20,0x30,0x0C,0x08,0x02,0x01],
-  [0x02,0x01,0x04,0x08,0x20,0x30,0xC0,0x80, 0x80,0xC0,0x30,0x20,0x08,0x04,0x01,0x02],
-  [0x01,0x02,0x08,0x0C,0x30,0x20,0x80,0x40, 0xC0,0x80,0x20,0x10,0x04,0x08,0x02,0x03],
-];
-const BEAM_CHAR = [3,2,2,5,5,4,4,3];   // L_A3D0: znak paprsku podle směru
-function beamBytes(frame, ch) {        // znaky 4,5 = data pozpátku (smyčka L_9BDB)
-  const d = BEAM_ANIM[frame], all = ch < 4 ? d : d.slice().reverse();
-  const o = (ch & 1) * 8; return all.slice(o, o + 8);
-}
-function glyphCanvas(bytes) {
-  const c = document.createElement('canvas'); c.width = 8; c.height = 8; const g = c.getContext('2d');
-  bytes.forEach((b, row) => { for (let px = 0; px < 4; px++) { const v = (b >> (6 - 2 * px)) & 3; if (v) { g.fillStyle = PAL[v]; g.fillRect(px * 2, row, 2, 1); } } });
+// ---- paprsek: 16 glyfů z lm-tiles.js ([fáze][znak-2]), průhledné pozadí ----
+const { beamGlyph, beamPhase } = root.LMTiles;
+const BEAM_PX = root.LMTiles.decodeBeam();
+function glyphCanvas(g) {
+  const c = document.createElement('canvas'); c.width = 8; c.height = 8; const ctx = c.getContext('2d');
+  for (let i = 0; i < 64; i++) { const v = BEAM_PX[g * 64 + i]; if (v) { ctx.fillStyle = PAL[v]; ctx.fillRect(i & 7, i >> 3, 1, 1); } }
   return c;
 }
-const BEAM_GLYPH = [0,1,2,3].map(f => [2,3,4,5].map(ch => glyphCanvas(beamBytes(f, ch))));   // [fáze][znak-2]
-const beamFrame = time => (Math.floor(time / 20) & 0x0C) >> 2;   // RTCLOK (50 Hz) & $0C
+const BEAM_GLYPH = [0,1,2,3].map(f => [0,1,2,3].map(k => glyphCanvas(f * 4 + k)));   // [fáze][znak-2]
+const beamFrame = time => beamPhase(Math.floor(time / 20));   // RTCLOK (50 Hz) & $0C
 
 // vykreslí stav hry; opts = { scale, beamMode: 'pixel'|'blink', grid }
 function render(ctx, st, time, opts) {
@@ -57,7 +48,7 @@ function render(ctx, st, time, opts) {
   for (let i = 0; i < W*H; i++) if (st.pf[i]) ctx.drawImage(ATLAS[st.pf[i] & 63], (i & 15) * 16 * SC, (i >> 4) * 16 * SC, 16 * SC, 16 * SC);
   if (opts.beamMode === 'pixel') {
     const f = beamFrame(time);
-    for (const p of st.cells) ctx.drawImage(BEAM_GLYPH[f][BEAM_CHAR[p.dir] - 2], p.x * 8 * SC, p.y * 8 * SC, 8 * SC, 8 * SC);
+    for (const p of st.cells) ctx.drawImage(BEAM_GLYPH[f][beamGlyph(0, p.dir)], p.x * 8 * SC, p.y * 8 * SC, 8 * SC, 8 * SC);
   } else {
     const phase = Math.floor(time / 120);
     for (const p of st.cells) {

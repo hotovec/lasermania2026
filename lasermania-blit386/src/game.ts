@@ -1,6 +1,6 @@
 // Lasermania pro BLIT386.
 //
-// Herní logika, data, dlaždice a tank se importují z referenčního dema (balíček @lasermania/js-demo ve
+// Herní logika, data, dlaždice, paprsek a tank se importují z referenčního dema (balíček @lasermania/js-demo ve
 // složce ../js-demo). Logika běží v update() ve stejném taktu jako originál (50 Hz, herní krok
 // každých 8 snímků). Stav portu viz ../project/docs/porting-plan.md a "Your notes" v CLAUDE.md.
 
@@ -27,6 +27,7 @@ const PF_X = 32;
 const PF_Y = 12;
 const TILE = LMTiles.TILE;
 const SHEET_COLS = 8; // sheet 128x128 = 8x8 dlaždic
+const CELL = 8; // buňka paprsku = znak 8x8, mřížka 32x24
 
 // Výběr levelu (originál má jen joystick): PageDown další, PageUp předchozí, R restart.
 const KEY_NEXT = 'PageDown';
@@ -34,24 +35,30 @@ const KEY_PREV = 'PageUp';
 const KEY_RESTART = 'KeyR';
 
 /**
- * Dev hook pro `npx blit play` (krok `state`, `eval:__game.load(n, kroky)`), jen v dev režimu.
- * `load(n, steps)` provede `steps` herních kroků a logiku zastaví (deterministický snímek pro porovnání
- * se screenshotem, viz ../js-demo/data/screens.json). Klávesy výběru levelu logiku zase pustí.
+ * Dev hook pro `npx blit play` (krok `state`, `eval:__game.load(n, kroky, fáze)`), jen v dev režimu.
+ * `load(n, steps, phase)` provede `steps` herních kroků, logiku zastaví a drží fázi paprsku `phase`
+ * (deterministický snímek pro porovnání se screenshotem, viz ../js-demo/data/screens.json). Při 0 krocích
+ * je paprsek spočítaný na kopii stavu, mapa zůstává ze startu (jako tools/compare_screen.js levelState).
+ * Klávesy výběru levelu logiku zase pustí.
  */
 interface DevHook {
-    state(): { level: number; tank: number; face: number; frozen: boolean; ticks: number };
-    load(n: number, steps?: number): void;
+    state(): { level: number; tank: number; face: number; beamPhase: number; frozen: boolean; ticks: number };
+    load(n: number, steps?: number, phase?: number): void;
 }
 
 class Game {
     private state!: GameState;
     private levelNo = 0;
     private frozen = false; // jen dev hook: logika stojí
+    private frozenPhase: number | null = null; // jen dev hook: pevná fáze paprsku
     private tiles!: SpriteSheet;
     private tileRects: Rect2i[] = [];
     private tank!: SpriteSheet;
     private tankRects: Rect2i[] = [];
     private cellPos: Vector2i[] = [];
+    private beam!: SpriteSheet;
+    private beamRects: Rect2i[] = [];
+    private beamPos: Vector2i[] = [];
 
     configure() {
         return {
@@ -83,6 +90,14 @@ class Game {
         this.tank = this.buildTankSheet();
         for (let f = 0; f < LMTiles.TANK_FRAMES; f++) this.tankRects.push(new Rect2i(f * TILE, 0, TILE, TILE));
 
+        this.beam = this.buildBeamSheet();
+        for (let g = 0; g < LMTiles.BEAM_GLYPHS; g++) this.beamRects.push(new Rect2i(g * CELL, 0, CELL, CELL));
+        for (let i = 0; i < LMCore.W * 2 * LMCore.H * 2; i++) {
+            this.beamPos.push(
+                new Vector2i(PF_X + (i % (LMCore.W * 2)) * CELL, PF_Y + Math.floor(i / (LMCore.W * 2)) * CELL),
+            );
+        }
+
         this.load(0);
         if (BT.isDevMode) {
             const hook: DevHook = {
@@ -90,14 +105,21 @@ class Game {
                     level: this.levelNo,
                     tank: this.state.tank,
                     face: this.state.face,
+                    beamPhase: this.beamPhase(),
                     frozen: this.frozen,
                     ticks: BT.ticks,
                 }),
-                load: (n, steps) => {
+                load: (n, steps, phase) => {
                     this.load(n);
                     if (steps === undefined) return;
                     for (let k = 0; k < steps; k++) LMCore.tick(this.state);
+                    if (steps === 0) {
+                        const beam = LMCore.createState(data.levels[this.levelNo]);
+                        LMCore.runLaser(beam);
+                        this.state.cells = beam.cells;
+                    }
                     this.frozen = true;
+                    this.frozenPhase = phase ?? null;
                 },
             };
             (window as unknown as { __game: DevHook }).__game = hook;
@@ -111,6 +133,12 @@ class Game {
         this.levelNo = ((n % count) + count) % count;
         this.state = LMCore.createState(data.levels[this.levelNo]);
         this.frozen = false;
+        this.frozenPhase = null;
+    }
+
+    // fáze animace paprsku jako VBI originálu: (RTCLOK & $0C) >> 2, RTCLOK = BT.ticks (50 Hz)
+    private beamPhase(): number {
+        return this.frozenPhase ?? LMTiles.beamPhase(BT.ticks);
     }
 
     // 64 dlaždic z originálních fontů (lm-tiles.js) do sheetu 8x8 dlaždic, index v -> slot v + 1
@@ -146,6 +174,22 @@ class Game {
         return SpriteSheet.fromIndexedPixels(width, TILE, pixels);
     }
 
+    // 16 glyfů paprsku (lm-tiles.js, glyf = fáze*4 + znak-2) vedle sebe, index 1-3 -> slot PF0-PF2, 0 průhledné
+    private buildBeamSheet(): SpriteSheet {
+        const src = LMTiles.decodeBeam();
+        const width = LMTiles.BEAM_GLYPHS * CELL;
+        const pixels = new Uint8Array(width * CELL);
+        for (let g = 0; g < LMTiles.BEAM_GLYPHS; g++) {
+            for (let y = 0; y < CELL; y++) {
+                for (let x = 0; x < CELL; x++) {
+                    const v = src[g * CELL * CELL + y * CELL + x];
+                    pixels[y * width + g * CELL + x] = v ? v + C_BLACK : 0;
+                }
+            }
+        }
+        return SpriteSheet.fromIndexedPixels(width, CELL, pixels);
+    }
+
     update(): void {
         if (BT.isKeyPressed(KEY_NEXT)) this.load(this.levelNo + 1);
         else if (BT.isKeyPressed(KEY_PREV)) this.load(this.levelNo - 1);
@@ -158,6 +202,15 @@ class Game {
         const pf = this.state.pf;
         for (let i = 0; i < pf.length; i++) {
             if (pf[i]) BT.drawSprite(this.tiles, this.tileRects[pf[i] & 63], this.cellPos[i]);
+        }
+        // paprsek nad dlaždicemi, pod tankem (PMG má v originále přednost před playfieldem)
+        const phase = this.beamPhase();
+        for (const c of this.state.cells) {
+            BT.drawSprite(
+                this.beam,
+                this.beamRects[LMTiles.beamGlyph(phase, c.dir)],
+                this.beamPos[c.y * LMCore.W * 2 + c.x],
+            );
         }
         const tank = this.state.tank;
         if (tank < pf.length)

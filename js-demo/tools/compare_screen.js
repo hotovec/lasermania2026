@@ -3,10 +3,12 @@
 //   node tools/compare_screen.js --all [captureDir] [--diff-dir dir]     (captureDir/l00.png … l52.png)
 // Reference = mapa levelu po createState (s východem a emitorem) + tank z lm-tiles.js (stejné indexy jako js-demo),
 // umístěná jako v portu. Výřez screenshotu 320×240 od x=32 (hrací plocha 256×192 na (32,12), jako v originále).
-// Screenshot nemusí být ze startu: data/screens.json říká, po kolika herních krocích vznikl (reference i snímek portu
-// se dělají ve stejném stavu, port přes __game.load(n, kroky)) a která políčka se liší z jiného důvodu.
-// Maska očekávaných rozdílů: buňky paprsku (M3), stavový řádek (M6). Snímek portu musí s referencí souhlasit vždy
-// úplně. Exit 1 při jiném rozdílu.
+// Screenshot nemusí být ze startu: data/screens.json říká, po kolika herních krocích vznikl, v jaké fázi je animace
+// paprsku a kolik buněk paprsku originál stihl nakreslit (double buffer); reference i snímek portu se dělají ve
+// stejném stavu (port přes __game.load(n, kroky, fáze)). Políčka `tiles` se liší z jiného důvodu.
+// Maskuje se jen stavový řádek (M6) a u snímku portu nedokreslený konec paprsku. Snímek portu musí s referencí
+// souhlasit vždy úplně. Exit 1 při jiném rozdílu.
+//   node tools/compare_screen.js --search <level>     najde stav screenshotu (kroky, fáze, počet buněk paprsku)
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -77,8 +79,8 @@ export function writePng(file, { width, height, rgb }) {
 
 // ---- reference, screenshot, maska ----
 const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-const REF_PAL = [...LMTiles.PAL, ...LMTiles.TANK_PAL].map(hexRgb);   // indexy renderPlayfield: 0–4 dlaždice, 5–6 tank
-let TILES = null, TANK_PX = null;
+const REF_PAL = [...LMTiles.PAL, ...LMTiles.TANK_PAL].map(hexRgb);   // indexy renderPlayfield: 0–4 dlaždice a paprsek, 5–6 tank
+let TILES = null, TANK_PX = null, BEAM_PX = null;
 
 // stav levelu po `ticks` herních krocích; při 0 krocích mapa ze startu (runLaser umí mapu změnit, např. výbuch
 // v levelu 32) a paprsek (st.cells) z runLaser na samostatném stavu
@@ -89,14 +91,20 @@ export function levelState(level, ticks = 0) {
   return st;
 }
 
-export function referenceFrame(level, ticks = 0) {
+// snímek ze stavu: dlaždice, paprsek (prvních `beamCells` buněk ve fázi `beamPhase`), tank – jako port
+export function renderState(st, beamPhase = 0, beamCells = Infinity) {
   TILES ??= LMTiles.decodeTiles(LMTiles.b64(DATA.font1), LMTiles.b64(DATA.font2));
   TANK_PX ??= LMTiles.decodeTank(LMTiles.b64(DATA.tankPmg));
-  const st = levelState(level, ticks);
-  const pf = LMTiles.renderPlayfield(TILES, st.pf, { pos: st.tank, frame: LMTiles.tankFrame(st.face), pixels: TANK_PX });
+  BEAM_PX ??= LMTiles.decodeBeam();
+  const pf = LMTiles.renderPlayfield(TILES, st.pf, { pos: st.tank, frame: LMTiles.tankFrame(st.face), pixels: TANK_PX },
+    { cells: st.cells.slice(0, beamCells), phase: beamPhase, glyphs: BEAM_PX });
   const rgb = new Uint8Array(SCREEN_W * SCREEN_H * 3);   // mimo hrací plochu černá (pozadí)
   for (let y = 0; y < 192; y++) for (let x = 0; x < 256; x++) rgb.set(REF_PAL[pf[y * 256 + x]], ((PF_Y + y) * SCREEN_W + PF_X + x) * 3);
   return { width: SCREEN_W, height: SCREEN_H, rgb };
+}
+
+export function referenceFrame(level, { ticks = 0, beamPhase = 0, beamCells = Infinity } = {}) {
+  return renderState(levelState(level, ticks), beamPhase, beamCells);
 }
 
 export function screenshotFrame(level) {
@@ -106,18 +114,17 @@ export function screenshotFrame(level) {
   return { width: SCREEN_W, height: SCREEN_H, rgb };
 }
 
-// 1 = očekávaný rozdíl (paprsek, stavový řádek a vše pod hrací plochou)
-export function expectedMask(level, ticks = 0) {
-  const m = new Uint8Array(SCREEN_W * SCREEN_H), st = levelState(level, ticks);
-  const box = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) m.fill(1, y * SCREEN_W + x0, y * SCREEN_W + x0 + w); };
-  for (const c of st.cells) box(PF_X + c.x * 8, PF_Y + c.y * 8, 8, 8);
-  box(0, STATUS_Y, SCREEN_W, SCREEN_H - STATUS_Y);
-  return m;
-}
-
 const same = (a, b, o) => a.rgb[o] === b.rgb[o] && a.rgb[o + 1] === b.rgb[o + 1] && a.rgb[o + 2] === b.rgb[o + 2];
 const tileOf = i => { const x = (i % SCREEN_W) - PF_X, y = Math.floor(i / SCREEN_W) - PF_Y;
   return x >= 0 && x < 256 && y >= 0 && y < 192 ? (y >> 4) * 16 + (x >> 4) : -1; };
+
+// 1 = očekávaný rozdíl: stavový řádek a vše pod hrací plochou; s `full`/`partial` navíc pixely, kde se plný
+// a nedokreslený paprsek liší (pro snímek portu vs. screenshot)
+export function expectedMask(full, partial) {
+  const m = new Uint8Array(SCREEN_W * SCREEN_H).fill(1, STATUS_Y * SCREEN_W);
+  if (full && partial) for (let i = 0; i < STATUS_Y * SCREEN_W; i++) if (!same(full, partial, i * 3)) m[i] = 1;
+  return m;
+}
 
 // rozdíly: mimo masku / v masce / povolené výjimkou (políčka `allowed`); `tiles` = políčka s nepovoleným rozdílem
 export function diff(a, b, mask, allowed = new Set()) {
@@ -145,21 +152,44 @@ function diffImage(a, b, mask, allowed = new Set()) {
 
 const DATA = JSON.parse(fs.readFileSync(new URL('../data/lasermania.json', import.meta.url), 'utf8'));
 const SCREENS = JSON.parse(fs.readFileSync(new URL('../data/screens.json', import.meta.url), 'utf8')).levels;
-export const screenTicks = n => SCREENS[n]?.ticks ?? 0;
+// stav na screenshotu levelu n (neuvedený level = start, fáze 0, celý paprsek)
+export const screenState = n => ({ ticks: SCREENS[n]?.ticks ?? 0, beamPhase: SCREENS[n]?.beamPhase ?? 0,
+  beamCells: SCREENS[n]?.beamCells ?? Infinity });
 export const allowedTiles = n => new Set((SCREENS[n]?.tiles ?? []).map(([c, r]) => r * 16 + c));
 
 function compareLevel(n, captureFile, diffFile) {
-  const level = DATA.levels[n], ticks = screenTicks(n);
-  const ref = referenceFrame(level, ticks), shot = screenshotFrame(level), mask = expectedMask(level, ticks);
-  const allowed = allowedTiles(n), rows = [['reference vs. screenshot', diff(ref, shot, mask, allowed)]];
+  const level = DATA.levels[n], { ticks, beamPhase, beamCells } = screenState(n), allowed = allowedTiles(n);
+  const full = referenceFrame(level, { ticks, beamPhase }), partial = referenceFrame(level, { ticks, beamPhase, beamCells });
+  const shot = screenshotFrame(level), statusMask = expectedMask(), tailMask = expectedMask(full, partial);
+  const rows = [['reference vs. screenshot', diff(partial, shot, statusMask, allowed)]];
   let cap = null;
   if (captureFile) {
     cap = readPng(fs.readFileSync(captureFile));
     if (cap.width !== SCREEN_W || cap.height !== SCREEN_H) throw new Error(`${captureFile}: ${cap.width}×${cap.height}, čekám ${SCREEN_W}×${SCREEN_H}`);
-    rows.push(['capture vs. reference', diff(cap, ref, null)], ['capture vs. screenshot', diff(cap, shot, mask, allowed)]);
+    rows.push(['capture vs. reference', diff(cap, full, null)], ['capture vs. screenshot', diff(cap, shot, tailMask, allowed)]);
   }
-  if (diffFile) writePng(diffFile, diffImage(cap ?? ref, shot, mask, allowed));
+  if (diffFile) writePng(diffFile, cap ? diffImage(cap, shot, tailMask, allowed) : diffImage(partial, shot, statusMask, allowed));
   return rows;
+}
+
+// najde stav screenshotu: nejmenší počet kroků, fázi a počet nakreslených buněk paprsku s nejmenším rozdílem
+export function searchScreen(n, maxTicks = 300) {
+  const level = DATA.levels[n], shot = screenshotFrame(level), mask = expectedMask(), allowed = allowedTiles(n);
+  let best = null;
+  for (let ticks = 0; ticks <= maxTicks; ticks++) {
+    const st = levelState(level, ticks);
+    // mapa a tank bez paprsku: pixely buněk paprsku ignorovat (zjistí, jestli má smysl zkoušet fáze a délky)
+    const noBeam = renderState(st, 0, 0), beamMask = mask.slice();
+    for (const c of st.cells) for (let y = 0; y < 8; y++) beamMask.fill(1, (PF_Y + c.y * 8 + y) * SCREEN_W + PF_X + c.x * 8, (PF_Y + c.y * 8 + y) * SCREEN_W + PF_X + c.x * 8 + 8);
+    const mapDiff = diff(noBeam, shot, beamMask, allowed).outside;
+    if (best && mapDiff > best.diff) continue;
+    for (let beamPhase = 0; beamPhase < 4; beamPhase++) for (let cells = st.cells.length; cells >= 0; cells--) {
+      const d = diff(renderState(st, beamPhase, cells), shot, mask, allowed).outside;
+      if (!best || d < best.diff) best = { ticks, beamPhase, beamCells: cells, of: st.cells.length, diff: d };
+      if (!d) return best;
+    }
+  }
+  return best;
 }
 
 const fmtTiles = (r, pf) => [...r.tiles].filter(t => t >= 0).sort((x, y) => x - y)
@@ -168,19 +198,23 @@ const fmtTiles = (r, pf) => [...r.tiles].filter(t => t >= 0).sort((x, y) => x - 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), opt = name => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : null; };
   const here = f => f && path.resolve(process.env.INIT_CWD ?? process.cwd(), f);   // npm run z kořene běží v js-demo/
-  const diffFile = here(opt('--diff')), diffDir = here(opt('--diff-dir')), all = args[0] === '--all';
+  const diffFile = here(opt('--diff')), diffDir = here(opt('--diff-dir'));
   let failed = false;
-  if (all) {
+  if (args[0] === '--search') {
+    const r = searchScreen(Number(args[1]));
+    console.log(`level ${args[1]}: kroky ${r.ticks}, fáze ${r.beamPhase}, buněk paprsku ${r.beamCells} z ${r.of}, rozdíl ${r.diff} px`);
+    failed = r.diff > 0;
+  } else if (args[0] === '--all') {
     const capDir = here(args[1]);
     if (diffDir) fs.mkdirSync(diffDir, { recursive: true });
     for (let n = 0; n < DATA.levels.length; n++) {
-      const id = 'l' + String(n).padStart(2, '0');
+      const id = 'l' + String(n).padStart(2, '0'), { ticks, beamPhase, beamCells } = screenState(n);
       const rows = compareLevel(n, capDir && path.join(capDir, id + '.png'), diffDir && path.join(diffDir, id + '-diff.png'));
-      const pf = levelState(DATA.levels[n], screenTicks(n)).pf;
-      const bad = rows.filter(([, r]) => r.outside);
+      const pf = levelState(DATA.levels[n], ticks).pf, bad = rows.filter(([, r]) => r.outside);
       failed ||= bad.length > 0;
-      const ticks = screenTicks(n), allowed = (ticks ? ` (po ${ticks} krocích)` : '') + (rows[0][1].allowed ? ` (výjimka ${rows[0][1].allowed} px)` : '');
-      console.log(`${id} ${bad.length ? 'ROZDÍL' : 'ok    '}${allowed}` + bad.map(([name, r]) => `\n     ${name}: ${r.outside} px ${fmtTiles(r, pf)}`).join(''));
+      const note = `fáze ${beamPhase}` + (ticks ? `, po ${ticks} krocích` : '') + (beamCells !== Infinity ? `, paprsek ${beamCells} buněk` : '')
+        + (rows[0][1].allowed ? `, výjimka ${rows[0][1].allowed} px` : '');
+      console.log(`${id} ${bad.length ? 'ROZDÍL' : 'ok    '} (${note})` + bad.map(([name, r]) => `\n     ${name}: ${r.outside} px ${fmtTiles(r, pf)}`).join(''));
     }
   } else {
     const n = Number(args[0] ?? 0), rows = compareLevel(n, here(args[1]), diffFile);

@@ -2,6 +2,15 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Glyfy paprsku v `lm-tiles.js`.** `BEAM_ANIM`, `BEAM_CHAR`, `decodeBeam`, `beamGlyph`, `beamPhase`
+  přesunuté z `lm-graphics.js` (demo je používá, glyfy ověřené shodné). Průhledné pozadí glyfu, pořadí dlaždice →
+  paprsek → tank. Důvod: sedí na všechny screenshoty, tank v originále je PMG nad playfieldem.
+- **2026-10-08 Port kreslí celý paprsek.** Nedokreslený paprsek na 6 screenshotech je artefakt double bufferu
+  originálu (VBI přepne buffer dřív, než `run_laser` doběhne), ne herní pravidlo. `screens.json` má `beamCells`
+  jen pro porovnání; u snímku portu se maskuje jen nedokreslený konec.
+- **2026-10-08 Dev hook `load(n, kroky, fáze)`.** Drží i fázi paprsku; při 0 krocích paprsek z `runLaser` na kopii
+  stavu (mapa ze startu), stejně jako `levelState` v `compare_screen.js`.
+
 - **2026-10-08 Tank z PMG dat dumpu, demo i port.** `build_data.py` bere `$8700–$88FF` z `lmdump0300`
   (`tankPmg`), `lm-tiles.js` dekóduje 16 snímků; demo přestalo sprite otáčet, ruční přepis `tank` ze screenshotu
   zmizel. Důvod: originální snímky pro všechny směry (a pro M4 fáze pásů), demo a port kreslí stejné pixely.

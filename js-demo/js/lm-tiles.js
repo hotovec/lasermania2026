@@ -1,4 +1,4 @@
-// Lasermania – dlaždice z originálních fontů a sprite tanku z PMG dat jako indexy barev (bez DOM).
+// Lasermania – dlaždice z originálních fontů, glyfy paprsku a tank z PMG dat jako indexy barev (bez DOM).
 // Sdílí demo (lm-graphics.js) i port do blit386 (esm/tiles.js). Indexy: 0 pozadí, 1 PF0, 2 PF1, 3 PF2, 4 PF3.
 (function (root) {
 'use strict';
@@ -62,13 +62,48 @@ function decodeTank(pmg) {
 const FACE_DIR = [2, 1, 3, 0];   // LMCore face: 0 nahoru, 1 doleva, 2 dolů, 3 doprava
 const tankFrame = (face, phase = 0, blocked = false) => (FACE_DIR[face] | (blocked ? 4 : 0)) * 2 + (phase & 1);
 
-// mapa 16×12 dlaždic → 256×192 indexů (referenční render hrací plochy bez paprsku);
-// s `tank` = { pos, frame, pixels } navíc tank s indexy 5 (P0) a 6 (P1)
-function renderPlayfield(tiles, pf, tank) {
+// ---- paprsek: VBI ($9BBA) kopíruje každé 4 snímky 16 bajtů z L_9F79 ($9F7A + fáze*16) do znaků 2–5 ----
+const BEAM_ANIM = [
+  [0x02,0x03,0x0C,0x08,0x20,0x10,0x40,0x80, 0x80,0x40,0x10,0x20,0x08,0x0C,0x03,0x02],
+  [0x03,0x02,0x08,0x04,0x10,0x20,0x80,0xC0, 0x40,0x80,0x20,0x30,0x0C,0x08,0x02,0x01],
+  [0x02,0x01,0x04,0x08,0x20,0x30,0xC0,0x80, 0x80,0xC0,0x30,0x20,0x08,0x04,0x01,0x02],
+  [0x01,0x02,0x08,0x0C,0x30,0x20,0x80,0x40, 0xC0,0x80,0x20,0x10,0x04,0x08,0x02,0x03],
+];
+const BEAM_CHAR = [3,2,2,5,5,4,4,3];   // L_A3D0: znak paprsku podle směru
+const BEAM_GLYPHS = 16;                // 4 fáze × znaky 2–5
+function beamBytes(phase, ch) {        // znaky 4,5 = data pozpátku (smyčka L_9BDB)
+  const d = BEAM_ANIM[phase], all = ch < 4 ? d : d.slice().reverse();
+  const o = (ch & 1) * 8; return all.slice(o, o + 8);
+}
+// 16 glyfů 8×8 za sebou (glyf = fáze*4 + znak-2), 0 průhledné (vidět dlaždice pod paprskem), 1–3 PF0–PF2;
+// pixel znaku je 2× široký jako u dlaždic
+function decodeBeam() {
+  const out = new Uint8Array(BEAM_GLYPHS * 64);
+  for (let phase = 0; phase < 4; phase++) for (let ch = 2; ch < 6; ch++) {
+    const g = (phase * 4 + ch - 2) * 64;
+    beamBytes(phase, ch).forEach((b, row) => {
+      for (let px = 0; px < 4; px++) { const v = (b >> (6 - 2 * px)) & 3; out[g + row * 8 + px * 2] = v; out[g + row * 8 + px * 2 + 1] = v; }
+    });
+  }
+  return out;
+}
+const beamGlyph = (phase, dir) => phase * 4 + BEAM_CHAR[dir] - 2;
+const beamPhase = ticks => (ticks & 0x0C) >> 2;   // RTCLOK (50 Hz) & $0C
+
+// mapa 16×12 dlaždic → 256×192 indexů (referenční render hrací plochy), pořadí jako v originále:
+// dlaždice, paprsek (`beam` = { cells, phase, glyphs }, průhledný), tank (`tank` = { pos, frame, pixels },
+// PMG má přednost před playfieldem) s indexy 5 (P0) a 6 (P1)
+function renderPlayfield(tiles, pf, tank, beam) {
   const W = 16, SW = W * TILE, out = new Uint8Array(SW * 12 * TILE);
   for (let i = 0; i < pf.length; i++) {
     const t = (pf[i] & 63) * TILE * TILE, x0 = (i % W) * TILE, y0 = Math.floor(i / W) * TILE;
     for (let y = 0; y < TILE; y++) out.set(tiles.subarray(t + y * TILE, t + y * TILE + TILE), (y0 + y) * SW + x0);
+  }
+  if (beam) for (const c of beam.cells) {
+    const g = beamGlyph(beam.phase, c.dir) * 64;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      const v = beam.glyphs[g + y * 8 + x]; if (v) out[(c.y * 8 + y) * SW + c.x * 8 + x] = v;
+    }
   }
   if (tank && tank.pos < pf.length) {
     const x0 = (tank.pos % W) * TILE, y0 = Math.floor(tank.pos / W) * TILE, f = tank.frame * TILE * TILE;
@@ -79,6 +114,7 @@ function renderPlayfield(tiles, pf, tank) {
   return out;
 }
 
-root.LMTiles = { TILE, COUNT, INV_ORIG, PAL, TANK_PAL, TANK_FRAMES, b64, decodeTiles, decodeTank, tankFrame, renderPlayfield };
+root.LMTiles = { TILE, COUNT, INV_ORIG, PAL, TANK_PAL, TANK_FRAMES, BEAM_ANIM, BEAM_CHAR, BEAM_GLYPHS, b64, decodeTiles,
+                 decodeTank, tankFrame, beamBytes, decodeBeam, beamGlyph, beamPhase, renderPlayfield };
 if (typeof module !== 'undefined') module.exports = root.LMTiles;
 })(typeof window !== 'undefined' ? window : globalThis);
