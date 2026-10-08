@@ -1,0 +1,429 @@
+{
+ "steps": 400,
+ "levels": [
+  {
+   "n": 0,
+   "hash": "0ba284bcf76d8ca1",
+   "tank": 182,
+   "emitter": 100,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 1,
+   "hash": "3803f3f77246bb0e",
+   "tank": 56,
+   "emitter": 87,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 2,
+   "hash": "a544e28757d1ad55",
+   "tank": 170,
+   "emitter": 104,
+   "dir": 7,
+   "won": false
+  },
+  {
+   "n": 3,
+   "hash": "de108d7e15eabc53",
+   "tank": 155,
+   "emitter": 152,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 4,
+   "hash": "c5bc5d6745ef6cba",
+   "tank": 168,
+   "emitter": 183,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 5,
+   "hash": "ee96ee8605d80e5d",
+   "tank": 162,
+   "emitter": 255,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 6,
+   "hash": "662204e997f042a1",
+   "tank": 191,
+   "emitter": 126,
+   "dir": 7,
+   "won": false
+  },
+  {
+   "n": 7,
+   "hash": "bd21f8d684b27a30",
+   "tank": 154,
+   "emitter": 158,
+   "dir": 7,
+   "won": false
+  },
+  {
+   "n": 8,
+   "hash": "97cb2e71f3a84692",
+   "tank": 19,
+   "emitter": 190,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 9,
+   "hash": "b5341b88df56fd9a",
+   "tank": 85,
+   "emitter": 157,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 10,
+   "hash": "a289ea2a5b0478c8",
+   "tank": 169,
+   "emitter": 146,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 11,
+   "hash": "a058ebe0536e875b",
+   "tank": 191,
+   "emitter": 162,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 12,
+   "hash": "893c487e12956c38",
+   "tank": 190,
+   "emitter": 179,
+   "dir": 2,
+   "won": false
+  },
+  {
+   "n": 13,
+   "hash": "e2a1557e4e1c7562",
+   "tank": 158,
+   "emitter": 88,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 14,
+   "hash": "ae559e42327c76b8",
+   "tank": 191,
+   "emitter": 89,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 15,
+   "hash": "a44748245ba1cf1c",
+   "tank": 94,
+   "emitter": 30,
+   "dir": 5,
+   "won": false
+  },
+  {
+   "n": 16,
+   "hash": "002ed25d5aa03e74",
+   "tank": 190,
+   "emitter": 129,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 17,
+   "hash": "b0e9e62771b26c0b",
+   "tank": 191,
+   "emitter": 146,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 18,
+   "hash": "31cef1626f79c5d9",
+   "tank": 157,
+   "emitter": 103,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 19,
+   "hash": "99b77a7c952f09d1",
+   "tank": 188,
+   "emitter": 132,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 20,
+   "hash": "535f8e29e5c9d230",
+   "tank": 171,
+   "emitter": 161,
+   "dir": 2,
+   "won": false
+  },
+  {
+   "n": 21,
+   "hash": "6c26ab8f4c5083a3",
+   "tank": 158,
+   "emitter": 18,
+   "dir": 4,
+   "won": false
+  },
+  {
+   "n": 22,
+   "hash": "0086225d2be30508",
+   "tank": 174,
+   "emitter": 167,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 23,
+   "hash": "de1c457f883c7374",
+   "tank": 191,
+   "emitter": 255,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 24,
+   "hash": "950862d66a9288c8",
+   "tank": 61,
+   "emitter": 255,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 25,
+   "hash": "a3fa916b1ff50bc9",
+   "tank": 191,
+   "emitter": 60,
+   "dir": 5,
+   "won": false
+  },
+  {
+   "n": 26,
+   "hash": "12c3795c6f4c10e4",
+   "tank": 104,
+   "emitter": 97,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 27,
+   "hash": "91bc1e74e42286e6",
+   "tank": 191,
+   "emitter": 15,
+   "dir": 6,
+   "won": false
+  },
+  {
+   "n": 28,
+   "hash": "2bc0d050be82c6dd",
+   "tank": 30,
+   "emitter": 33,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 29,
+   "hash": "1881b0854fe7337e",
+   "tank": 191,
+   "emitter": 50,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 30,
+   "hash": "daee743bcc968386",
+   "tank": 191,
+   "emitter": 99,
+   "dir": 2,
+   "won": false
+  },
+  {
+   "n": 31,
+   "hash": "a1f662bd5fa05b17",
+   "tank": 84,
+   "emitter": 176,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 32,
+   "hash": "1e17daea21ba0cc5",
+   "tank": 131,
+   "emitter": 255,
+   "dir": 5,
+   "won": false
+  },
+  {
+   "n": 33,
+   "hash": "2c46d3fa7265b72d",
+   "tank": 89,
+   "emitter": 17,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 34,
+   "hash": "41f2df87f321e1d4",
+   "tank": 188,
+   "emitter": 30,
+   "dir": 4,
+   "won": false
+  },
+  {
+   "n": 35,
+   "hash": "ea4e102510f02f8f",
+   "tank": 186,
+   "emitter": 176,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 36,
+   "hash": "2408769816553b65",
+   "tank": 107,
+   "emitter": 34,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 37,
+   "hash": "18bb9aefed430574",
+   "tank": 133,
+   "emitter": 134,
+   "dir": 7,
+   "won": false
+  },
+  {
+   "n": 38,
+   "hash": "8ab8ea8f4c0c91d7",
+   "tank": 174,
+   "emitter": 88,
+   "dir": 5,
+   "won": false
+  },
+  {
+   "n": 39,
+   "hash": "c91f3aa27827421f",
+   "tank": 74,
+   "emitter": 49,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 40,
+   "hash": "3407a4adc37b0c62",
+   "tank": 124,
+   "emitter": 17,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 41,
+   "hash": "1856391765953e5c",
+   "tank": 126,
+   "emitter": 161,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 42,
+   "hash": "7e56083ac50e5147",
+   "tank": 159,
+   "emitter": 255,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 43,
+   "hash": "0cfd6dd8a5bb774d",
+   "tank": 57,
+   "emitter": 255,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 44,
+   "hash": "d4942537e3462336",
+   "tank": 159,
+   "emitter": 161,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 45,
+   "hash": "1c63603ab4670e6e",
+   "tank": 191,
+   "emitter": 47,
+   "dir": 0,
+   "won": false
+  },
+  {
+   "n": 46,
+   "hash": "521d187d3f595351",
+   "tank": 185,
+   "emitter": 169,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 47,
+   "hash": "e6099a5f3ae5deed",
+   "tank": 159,
+   "emitter": 86,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 48,
+   "hash": "564d0f646b5e45e0",
+   "tank": 174,
+   "emitter": 34,
+   "dir": 3,
+   "won": false
+  },
+  {
+   "n": 49,
+   "hash": "c43de1f2b961304b",
+   "tank": 191,
+   "emitter": 184,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 50,
+   "hash": "0c60311e28850efc",
+   "tank": 174,
+   "emitter": 161,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 51,
+   "hash": "03a0f2fcc9dda3e3",
+   "tank": 170,
+   "emitter": 81,
+   "dir": 1,
+   "won": false
+  },
+  {
+   "n": 52,
+   "hash": "830e49380b5a0f80",
+   "tank": 174,
+   "emitter": 177,
+   "dir": 3,
+   "won": false
+  }
+ ]
+}

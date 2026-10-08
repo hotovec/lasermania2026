@@ -1,0 +1,17 @@
+{
+  "name": "lasermania-monorepo",
+  "private": true,
+  "description": "Lasermania (L.K. Avalon 1990): původní zdroje, referenční JS demo a port do blit386.",
+  "workspaces": ["js-demo", "lasermania-blit386"],
+  "engines": { "node": ">=22.18.0" },
+  "scripts": {
+    "dev": "npm run dev -w lasermania-blit386",
+    "build": "npm run build -w lasermania-blit386",
+    "typecheck": "npm run typecheck -w lasermania-blit386",
+    "test": "npm test -w @lasermania/js-demo",
+    "check": "npm test && npm run typecheck",
+    "data": "npm run data -w @lasermania/js-demo",
+    "golden:record": "npm run golden:record -w @lasermania/js-demo",
+    "demo:single": "npm run single -w @lasermania/js-demo"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@lasermania/js-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Referenční JS demo Lasermanie: herní logika, grafika z originálních fontů, zvuk (6502 + POKEY), data 53 levelů.",
+  "type": "module",
+  "exports": {
+    "./core": { "types": "./esm/core.d.ts", "default": "./esm/core.js" },
+    "./audio": { "types": "./esm/audio.d.ts", "default": "./esm/audio.js" },
+    "./data.json": { "types": "./data/lasermania.d.ts", "default": "./data/lasermania.json" },
+    "./js/*": "./js/*"
+  },
+  "scripts": {
+    "data": "python3 tools/build_data.py",
+    "single": "python3 tools/build_single_html.py",
+    "music": "node tools/render_music.cjs",
+    "golden:record": "node tools/record_golden.js",
+    "test": "node --test \"tests/*.test.js\""
+  }
+}

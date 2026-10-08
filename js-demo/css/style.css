@@ -1,0 +1,62 @@
+/* Layout: obrazovka Atari vlevo jako hlavní plocha, ovládací panel vpravo; na telefonu pod sebou. Záměrně jen tmavý vzhled (CRT). */
+:root {
+  --bg: #0d0f14;
+  --panel: #161a22;
+  --line: #2a3140;
+  --fg: #d9dde6;
+  --muted: #8a93a6;
+  --accent: #a9aee0;     /* PF2 $7C z originální palety */
+  --green: #6fbf3a;
+  --font-display: "Silkscreen", "Courier New", monospace;
+  --font-body: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-body); font-size: 14px; line-height: 1.5; padding-inline: 16px; padding-block: 20px 32px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 4vw, 34px); margin: 0; color: var(--accent); letter-spacing: .02em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 72ch; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.screen { display: grid; gap: 12px; min-width: 0; }
+.levels { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; min-width: 0; flex: 0 1 240px; }
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crt { background: #000; border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+canvas#cv { display: block; width: 100%; height: auto; image-rendering: pixelated; touch-action: manipulation; }
+canvas#cv.edit { cursor: crosshair; }
+.status { display: flex; flex-wrap: wrap; gap: 6px 18px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.status b { color: var(--fg); font-weight: 600; }
+.msg { font-family: var(--font-display); color: var(--green); min-height: 1.5em; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--accent); color: #12142a; border-color: var(--accent); }
+.levels button small { color: var(--muted); margin-left: 4px; }
+.levels button[aria-pressed="true"] small { color: #3a3f6a; }
+.dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 44px); gap: 4px; margin-left: auto; }
+.dpad button { padding: 0; font-size: 18px; }
+.dpad .up { grid-column: 2; grid-row: 1; } .dpad .left { grid-column: 1; grid-row: 2; }
+.dpad .down { grid-column: 2; grid-row: 2; } .dpad .right { grid-column: 3; grid-row: 2; }
+aside { display: grid; gap: 16px; min-width: 0; }
+section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 13px; letter-spacing: .08em; margin: 0; color: var(--muted); text-transform: uppercase; }
+.palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.palette button { display: flex; align-items: center; gap: 6px; padding: 4px 6px; font-size: 12px; text-align: left; }
+#beamPreview { width: 100%; max-width: 242px; height: auto; image-rendering: pixelated; border-radius: 4px; }
+.vol { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+.vol input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.palette canvas { width: 24px; height: 24px; flex: none; image-rendering: pixelated; background: #000; }
+.segs { margin: 0; padding: 0; list-style: none; font-size: 12px; font-variant-numeric: tabular-nums; display: grid; gap: 2px; max-height: 240px; overflow: auto; }
+.segs li { display: grid; grid-template-columns: 2.2em 4.6em 3.2em minmax(0, 1fr); gap: 6px; }
+.segs .hd { color: var(--muted); }
+ul.how { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.how code, .note code { color: var(--accent); }
+.note { color: var(--muted); font-size: 12px; margin: 0; }
+kbd { font: inherit; border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+details.sfx summary { cursor: pointer; color: var(--muted); }
+.sfxlist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sfxlist button { font-size: 12px; padding: 4px 8px; }

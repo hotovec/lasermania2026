@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lasermania Laser Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lasermania Laser Lab</h1>
+    <p>Všech 53 levelů dekódovaných z původních dat hry (Atari 8bit, L.K. Avalon 1990), dlaždice vykreslené z originálních fontů. Paprsek počítá port rutiny <code>run_laser</code>.</p>
+  </header>
+
+  <div class="main">
+    <div class="screen">
+      <div class="levels">
+        <button id="btnPrev" type="button" aria-label="Předchozí level">◀</button>
+        <select id="levelSel" aria-label="Výběr levelu"></select>
+        <button id="btnNext" type="button" aria-label="Další level">▶</button>
+      </div>
+      <div class="crt"><canvas id="cv" width="1024" height="768" aria-label="Hrací plocha"></canvas></div>
+      <div class="status" aria-live="polite">
+        <span>Level: <b id="stLevel">00</b></span>
+        <span>Senzory: <b id="stSensors">0</b></span>
+        <span>Kapsle: <b id="stCaps">0</b></span>
+        <span>Úseky: <b id="stSegs">0</b></span>
+        <span>Emitor: <b id="stDir">–</b></span>
+      </div>
+      <div class="msg" id="msg"></div>
+      <div class="controls">
+        <button id="btnReset" type="button">Restart levelu</button>
+        <button id="btnEdit" type="button" aria-pressed="false">Editor</button>
+        <button id="btnGrid" type="button" aria-pressed="false">Mřížka znaků</button>
+        <button id="btnRotate" type="button">Otočit emitor</button>
+        <button id="btnBeam" type="button" aria-pressed="true">Animace: originál</button>
+        <div class="dpad" aria-label="Ovládání tanku">
+          <button class="up" type="button" data-d="0,-1" aria-label="Nahoru">▲</button>
+          <button class="left" type="button" data-d="-1,0" aria-label="Doleva">◀</button>
+          <button class="down" type="button" data-d="0,1" aria-label="Dolů">▼</button>
+          <button class="right" type="button" data-d="1,0" aria-label="Doprava">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <section class="card">
+        <h2>Jak hrát</h2>
+        <ul class="how">
+          <li>Šipky nebo <kbd>WASD</kbd> ovládají tank. Zelené bloky s odleskem jsou zrcadla, dají se posouvat.</li>
+          <li>Zničte paprskem všechny senzory a seberte kapsle. Pak se otevře východ (šachovnice).</li>
+          <li>Ovladač dveří (pruhovaný blok) otevírá dveře, dokud ho zasahuje paprsek, nebo když do něj tank narazí.</li>
+          <li>Odraz o 90° bere nový směr z <code>REFLECT[směr][krok&amp;1]</code>. Paprsek se zastaví o vlastní stopu.</li>
+        </ul>
+        <p class="note">Tank paprsek neblokuje, stejně jako v originále. Úpravy v editoru platí do restartu levelu.</p>
+      </section>
+
+      <section class="card">
+        <h2>Zvuk</h2>
+        <div class="controls">
+          <button id="btnMusic" type="button" aria-pressed="false">Přehrát hudbu</button>
+          <select id="songSel" aria-label="Skladba"></select>
+        </div>
+        <label class="vol" for="vol">Hudba <input id="vol" type="range" min="0" max="100" value="60"></label>
+        <div class="controls">
+          <button id="btnSfx" type="button" aria-pressed="true">Efekty: zapnuté</button>
+        </div>
+        <label class="vol" for="volSfx">Efekty <input id="volSfx" type="range" min="0" max="100" value="70"></label>
+        <details class="sfx">
+          <summary>Vyzkoušet efekty</summary>
+          <div class="sfxlist" id="sfxList"></div>
+        </details>
+        <p class="note">Hudba je originální přehrávač CMC z paměti hry (<code>$8900</code>, data na <code>$7700</code>) na emulovaném 6502. Titulka je skladba 3, ve hře se po čtyřech levelech střídají skladby 1 a 2, stejně jako v originále. Originální hra zvukové efekty nemá. Tyto jsou nové a generuje je druhý emulovaný čip POKEY, aby zněly jako Atari.</p>
+      </section>
+
+      <section class="card">
+        <h2>Znaky paprsku (4 fáze)</h2>
+        <canvas id="beamPreview" width="242" height="242" aria-label="Animační fáze znaků paprsku 2 až 5"></canvas>
+        <p class="note">Sloupce: znaky 2, 3, 4, 5 (<code>/</code> <code>\</code> <code>/</code> <code>\</code>). Řádky: fáze z tabulky <code>L_9F79</code>. VBI je každé 4 snímky (80 ms) kopíruje do fontu, takže barevné tečky běží po celém paprsku najednou. Znaky 4 a 5 jsou data pozpátku, proto u nich barvy tečou opačně, vždy ve směru letu.</p>
+      </section>
+
+      <section class="card" id="editCard" hidden>
+        <h2>Editor: klikněte do plochy</h2>
+        <div class="palette" id="palette"></div>
+        <p class="note">Relé se v editoru párují v pořadí, v jakém leží na mapě (1.↔2., 3.↔4.).</p>
+      </section>
+
+      <section class="card">
+        <h2>Fronta úseků (tento krok)</h2>
+        <ul class="segs" id="segs"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- pořadí je důležité: data -> zvuk -> logika -> grafika -> UI -->
+<script src="js/data.js"></script>
+<script src="js/atari-audio.js"></script>
+<script src="js/lm-core.js"></script>
+<script src="js/lm-graphics.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
