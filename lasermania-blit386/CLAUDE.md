@@ -171,5 +171,8 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
 - Stavový řádek (`src/statusbar.ts`): `@lasermania/js-demo/ui` (`statusbarCells`, `Equalizer`), y 208, panely sloty
   8–10. Životy: start 5, Escape / SELECT = −1, výhra +1. `state()` má `lives`, `gameOvers`, `eqPeaks`; `setLives(n)`;
   `load(n, …)` nastaví životy n + 5 (stav screenshotů).
+- Titulka a vítězná obrazovka (`src/title.ts`): originální kód v emulátoru (`LMUi.TitleMachine`), port kreslí pole
+  (sheet po každé iteraci), titulky, ©, scroller. Scény `title` → `game` → `title` / `win`; START = Enter, mezerník,
+  gamepad START/A. Dev: `__game.startGame(n)` přeskočí titulku, `show('title' | 'win')`, `state().scene`.
 - API ověřuj v `node_modules/blit386/dist/blit386.d.ts` (v monorepu je node_modules v kořeni: `../node_modules/`).
 - Po každé změně: `npm run check` z kořene (golden testy + `tsc`).

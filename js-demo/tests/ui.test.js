@@ -65,3 +65,13 @@ test('titulka: deterministický snímek pole (animace písmen) a tempo ~3 snímk
   const field = tm.renderField(new Uint8Array(256 * 128));
   assert.ok(field.subarray(0, 16).some(v => v === 4));
 });
+
+test('vítězná obrazovka: běží v emulátoru a START ji ukončí (skok na titulku $6AB7)', () => {
+  const tm = new LMUi.TitleMachine(b64(data.titleMem), 'win');
+  for (let f = 0; f < 300; f++) tm.frame();
+  assert.equal(tm.done, false);
+  assert.equal(tm.cpu.unknown, 0);
+  assert.ok(tm.renderField(new Uint8Array(256 * 128)).some(v => v), 'text GRATULACJE! na obrazovce');
+  for (let f = 0; f < 100 && !tm.done; f++) { tm.setInput(true); tm.frame(); }
+  assert.equal(tm.done, true);
+});

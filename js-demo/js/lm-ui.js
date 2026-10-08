@@ -104,8 +104,9 @@ class Equalizer {
 // RAM $5400-$93FF z dumpu (data.titleMem): fonty $5400/$5800, engine $5DC0, kód titulky $6900-$6FFF, text $7003,
 // sinus $75C3, hudba $7700 (přehrávač $8900 se nahradí RTS - hudbu hraje hostitel), font textu $9000.
 const TITLE_MEM_BASE = 0x5400;
-const ENTRY = { title: 0x6AB7, win: 0x6DF1 };
-const NEW_GAME = 0x6B7D;                    // L_6B7D: titulka skončila STARTem (dál by šla hra na $9400)
+const ENTRY = { title: 0x6AB7, win: 0x6B92 };   // vítězná: jsr L_6DF1 (init) + smyčka $6B95
+// konec: L_6B7D = titulka skončila STARTem (dál by šla hra na $9400); vítězná obrazovka po STARTu skočí na titulku
+const EXIT = { title: 0x6B7D, win: 0x6AB7 };
 const WAITS = [0x6386, 0x6E92];             // čekání na změnu RTCLOK ($14): konec snímku
 // Cykly CPU, které hlavní smyčce zbudou za snímek PAL (35568) po DMA úzkého playfieldu ANTIC 4 (~7300),
 // refreshi (~2800), PMG, DLI a VBI s přehrávačem CMC. Odhad: dává ~3 snímky na iteraci animace.
@@ -127,7 +128,14 @@ class TitleMachine {
     const m = this.mem = new Uint8Array(65536);
     m.set(titleMem, TITLE_MEM_BASE);
     m[0x8900] = 0x60; m[0x8903] = 0x60;            // CMC init / play -> RTS
-    this.cpu = new root.AtariAudio.CPU(m, { read: () => 0xff, write: () => {} });
+    // POKEY: RANDOM $D20A (zrcadlení písmen na vítězné obrazovce) z deterministického LFSR, ostatní $FF
+    let rnd = 0x1ff;
+    this.cpu = new root.AtariAudio.CPU(m, { read: a => {
+      if ((a & 15) !== 10) return 0xff;
+      for (let k = 0; k < 8; k++) rnd = (rnd >> 1) | ((((rnd >> 0) ^ (rnd >> 4)) & 1) << 8);
+      return rnd & 0xff;
+    }, write: () => {} });
+    this.exit = EXIT[entry];
     this.frames = 0; this.iterations = 0; this.budget = 0; this.spinning = false;
     this.setInput(false);
     const c = this.cpu; c.s = 0xff; c.push(0xff); c.push(0xfe); c.pc = ENTRY[entry];   // RTS -> $FFFF = konec
@@ -142,7 +150,7 @@ class TitleMachine {
     this.budget += CYCLES_PER_FRAME;
     while (this.budget > 0 && c.pc !== 0xffff) {
       if ((c.pc === WAITS[0] || c.pc === WAITS[1]) && c.a === m[0x14]) { this.budget = 0; break; }
-      if (c.pc === NEW_GAME) { c.pc = 0xffff; break; }
+      if (c.pc === this.exit) { c.pc = 0xffff; break; }
       if (c.pc === 0x639C) this.iterations++;
       this.budget -= CYC[m[c.pc]];
       c.step();
@@ -151,8 +159,9 @@ class TitleMachine {
     this.frames++;
     if (++m[0x14] === 256 || m[0x14] === 0) { m[0x14] = 0; m[0x13] = (m[0x13] + 1) & 255; if (!m[0x13]) m[0x12]++; }
   }
-  /** Zobrazený buffer: display list ($230) určí obrazovku, ZP_F3 font horních řádků (dolní = +4 stránky). */
-  get screen() { return (this.mem[0x231] << 8 | this.mem[0x230]) === 0x6A50 ? 0xBD00 : 0xBC00; }
+  /** Zobrazený buffer: display list ($230; titulka $6A07/$6A50, vítězná $6913/$694D) určí obrazovku $BC00/$BD00,
+   *  ZP_F3 font horních řádků (dolní = +4 stránky). */
+  get screen() { const dl = this.mem[0x231] << 8 | this.mem[0x230]; return dl === 0x6A50 || dl === 0x694D ? 0xBD00 : 0xBC00; }
   /** Pole 16×8 dlaždic (32×16 znaků, řádky dlaždic po 2 módových řádcích) -> 256×128 indexů 0-4. */
   renderField(out) {
     const m = this.mem, scr = this.screen, upper = m[0xF3] << 8, lower = (m[0xF3] + 4) << 8;

@@ -60,6 +60,13 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
     ekvalizér (+ životy a roh noty u screenshotů od levelu 12, upravená verze): reference = 53 screenshotů,
     snímek portu = reference na WebGPU i Canvas 2D. `blit play`: ESC 5 → 4, 1 → konec hry, výhra 5 → 6,
     ekvalizér se hýbe s hudbou.
-  - [ ] **M6c Titulka v portu** – scény titulka → hra → titulka / vítězná obrazovka, START/fire, skladba 0.
+  - [x] **M6c Titulka v portu** – scény titulka → hra → titulka / vítězná obrazovka, START/fire, skladba 0.
+    *Stav:* `src/title.ts`: `TitleMachine` každý snímek, pole se po iteraci animace dekóduje do sprite sheetu,
+    titulky/©/scroller po znacích fontu `$9000`, černá maska scrolleru. Scény `title` (skladba 0) → START
+    (Enter, mezerník, gamepad START/A; originál bere START až po ~5,1 s) → hra → konec hry → titulka; po levelu 52
+    vítězná obrazovka (`$6B92` v emulátoru, skladba 3) → START → titulka. Hudba: na startu jen skladba 0 a
+    efekty, ostatní na pozadí. Ověřeno `blit play` (WebGPU i Canvas 2D): START ve 2 s ignorován, v 6 s hra;
+    5× ESC → titulka; snímky titulky (2 s, 22 s se scrollerem) a vítězné obrazovky; snímky 53 levelů beze
+    změny. Barvy titulky jsou aproximace (screenshot titulky z originálu nemáme).
   - [ ] **M6d** Animace dalšího levelu (`L_9720`), editor (pointer), případně HTML kolem canvasu.
 - [ ] **M7 Doladění** – CRT efekty jen na WebGPU, test `?backend=software`, Safari (MP3), build a nasazení.

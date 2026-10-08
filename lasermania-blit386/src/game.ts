@@ -11,6 +11,7 @@ import LMTiles from '@lasermania/js-demo/tiles';
 import data from '@lasermania/js-demo/data.json';
 import { levelSong, type Song, Sound } from './sound';
 import { StatusBar } from './statusbar';
+import { TitleScreen } from './title';
 
 // Paleta (slot 0 je vždy průhledný). Barvy PAL z originálu: pozadí, PF0 $22, PF1 $C4, PF2 $7C, PF3 $96.
 // Index dlaždice v (0 pozadí, 1-4 PF0-PF3) leží ve slotu v + 1.
@@ -22,8 +23,9 @@ const C_PF3 = 5;
 // Tank (PMG): index 1 = P0 žlutá $1E, 2 = P1 růžová $4A -> sloty 6 a 7.
 const C_TANK_P0 = 6;
 const C_TANK_P1 = 7;
-// Šedé panely stavového řádku (PMG $08, $06, $0A) od slotu 8.
+// Šedé panely stavového řádku (PMG $08, $06, $0A) od slotu 8, titulka a vítězná obrazovka od slotu 11.
 const C_PANEL = 8;
+const C_TITLE = 11;
 
 const GAME_STEP_TICKS = 8; // herní smyčka originálu: 8 snímků = 160 ms
 const WIN_DELAY_TICKS = 80; // po vjezdu do východu další level za 1,6 s (jako js-demo)
@@ -47,6 +49,11 @@ const KEY_PREV = 'PageUp';
 const KEY_RESTART = 'KeyR';
 // Vzdát level za život (originál: ESC, KBCODE $1C); gamepad SELECT.
 const KEY_GIVE_UP = 'Escape';
+// START na titulce a vítězné obrazovce (originál START nebo fire): Enter, mezerník, gamepad START / A.
+const START_KEYS = ['Enter', 'Space'];
+
+/** title = titulka, game = hra, win = vítězná obrazovka po levelu 52. */
+type Scene = 'title' | 'game' | 'win';
 // Zvuk: M hudba, N efekty (zap/vyp).
 const KEY_MUSIC = 'KeyM';
 const KEY_SFX = 'KeyN';
@@ -85,6 +92,8 @@ interface MoveAnim {
  */
 interface DevHook {
     state(): {
+        scene: Scene;
+        titleFrames: number;
         level: number;
         tank: number;
         face: number;
@@ -115,6 +124,10 @@ interface DevHook {
     /** Zmrazený stav levelu n; životy n + 5 jako při hře od levelu 0 (stav screenshotů). */
     load(n: number, steps?: number, phase?: number): void;
     setLives(n: number): void;
+    /** Přeskočí titulku: nová hra od levelu n. */
+    startGame(n?: number): void;
+    /** Titulka (`title`) nebo vítězná obrazovka (`win`) od začátku. */
+    show(scene: 'title' | 'win'): void;
     /** Fixture pro testy: tank na políčko `pos` (řádek*16 + sloupec). */
     setTank(pos: number): void;
     /** Fixture pro testy: dlaždice `code` na políčko `pos`. */
@@ -150,6 +163,8 @@ class Game {
     private beamPos: Vector2i[] = [];
     private readonly sound = new Sound();
     private readonly statusBar = new StatusBar();
+    private readonly title = new TitleScreen();
+    private scene: Scene = 'title';
 
     configure() {
         return {
@@ -170,6 +185,7 @@ class Game {
         palette.set(C_TANK_P0, new Color32(0xdf, 0xd7, 0x77, 255));
         palette.set(C_TANK_P1, new Color32(0xc9, 0x6e, 0xd7, 255));
         this.statusBar.init(palette, C_BLACK, C_PANEL);
+        this.title.init(palette, C_TITLE, C_BLACK);
         BT.paletteSet(palette);
 
         // hráč 0: WASD (výchozí, jako wasd_keys v remaku) + šipky; gamepad hráče 0 se slučuje sám
@@ -197,16 +213,19 @@ class Game {
             );
         }
 
-        await this.sound.load();
+        await this.sound.load(0);
         BT.audioVolumeSet('music', MUSIC_VOLUME);
         BT.audioVolumeSet('sfx', SFX_VOLUME);
 
         this.load(0);
+        this.show('title');
         if (BT.isDevMode) {
             const hook: DevHook = {
                 state: () => {
                     const { x, y } = this.tankDraw();
                     return {
+                        scene: this.scene,
+                        titleFrames: this.title.frames,
                         level: this.levelNo,
                         tank: this.state.tank,
                         face: this.state.face,
@@ -234,6 +253,7 @@ class Game {
                     };
                 },
                 load: (n, steps, phase) => {
+                    this.scene = 'game';
                     this.load(n);
                     this.lives = this.levelNo + START_LIVES;
                     if (steps === undefined) return;
@@ -249,6 +269,8 @@ class Game {
                 setLives: (n) => {
                     this.lives = n;
                 },
+                startGame: (n = 0) => this.startGame(n),
+                show: (scene) => this.show(scene),
                 setTank: (pos) => {
                     this.state.tank = pos;
                     this.anim = null;
@@ -279,7 +301,14 @@ class Game {
         this.blockedStart = null;
         this.winAt = null;
         this.finished = false;
-        this.sound.playSong(levelSong(this.levelNo));
+        if (this.scene === 'game') this.sound.playSong(levelSong(this.levelNo));
+    }
+
+    // titulka (skladba 0) nebo vítězná obrazovka (skladba 3): originální kód v emulátoru
+    private show(scene: 'title' | 'win'): void {
+        this.scene = scene;
+        this.title.start(scene);
+        this.sound.playSong(scene === 'title' ? 0 : 3);
     }
 
     // fáze animace paprsku jako VBI originálu: (RTCLOK & $0C) >> 2, RTCLOK = BT.ticks (50 Hz)
@@ -338,6 +367,7 @@ class Game {
 
     // nová hra od levelu n (L_6B7D)
     private startGame(n: number): void {
+        this.scene = 'game';
         this.lives = START_LIVES;
         this.load(n);
     }
@@ -346,6 +376,16 @@ class Game {
         // VBI: přehrávač a ekvalizér běží každý snímek
         this.sound.update();
         this.statusBar.eq.step(this.sound.volumes());
+
+        if (this.scene !== 'game') {
+            const start =
+                START_KEYS.some((k) => BT.isKeyDown(k)) || BT.isDown(BT.BTN_START, 0) || BT.isDown(BT.BTN_A, 0);
+            if (this.title.update(start)) {
+                if (this.scene === 'title') this.startGame(0);
+                else this.show('title');
+            }
+            return;
+        }
 
         if (BT.isKeyPressed(KEY_NEXT)) this.load(this.levelNo + 1);
         else if (BT.isKeyPressed(KEY_PREV)) this.load(this.levelNo - 1);
@@ -366,7 +406,10 @@ class Game {
             if (this.levelNo < LAST_LEVEL) {
                 this.lives++; // $946C: další level a život navíc
                 this.load(this.levelNo + 1);
-            } else this.finished = true; // originál po levelu $53 končí
+            } else {
+                this.finished = true; // originál po levelu $53: vítězná obrazovka, pak titulka
+                this.show('win');
+            }
         }
 
         // vstup čte každý snímek (VBI control2), uloží první směr od posledního kroku (result_direction);
@@ -396,10 +439,10 @@ class Game {
         this.sound.playEvents(LMCore.takeEvents(this.state)); // události z move i tick
     }
 
-    // konec hry ($944C); titulka přijde v M6c, zatím nová hra od levelu 0
+    // konec hry ($944C): zpět na titulku
     private gameOver(): void {
         this.gameOvers++;
-        this.startGame(0);
+        this.show('title');
     }
 
     // pauza před opakováním (podle control2.update): nový stisk pohne tankem hned; stejný směr držený nepřetržitě
@@ -468,6 +511,10 @@ class Game {
 
     render(): void {
         BT.clear(C_BLACK);
+        if (this.scene !== 'game') {
+            this.title.render();
+            return;
+        }
         const pf = this.state.pf;
         const f = this.animFrame();
         const push = f !== null ? this.anim?.push : null;
@@ -497,8 +544,6 @@ class Game {
             BT.drawSprite(this.tank, this.tankRects[frame], this.drawPos);
         }
         this.statusBar.render(this.lives, this.levelNo);
-        // dočasná hláška, vítězná obrazovka přijde v M6c
-        if (this.finished) BT.systemPrint(new Vector2i(PF_X, 190), C_PF2, 'VSECHNY LEVELY HOTOVE');
     }
 }
 

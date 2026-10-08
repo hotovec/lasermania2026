@@ -2,6 +2,13 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Scény titulka → hra → titulka, vítězná obrazovka v emulátoru.** Vítězná obrazovka (`$6B92`:
+  `L_6DF1` + smyčka) běží stejně jako titulka; `RANDOM` (`$D20A`) dává deterministický LFSR. START = Enter /
+  mezerník / gamepad START nebo A (držení se předává jako CONSOL, originál si ho přečte jednou za iteraci).
+  Dev hook `startGame(n)` a `show('title' | 'win')`; `load(n, …)` přepne rovnou do hry (snímky pro porovnání).
+- **2026-10-08 Hudba se načítá postupně.** Na startu jen skladba 0 a efekty (~5 MB), ostatní skladby na pozadí;
+  vyžádaná skladba začne hrát po načtení.
+
 - **2026-10-08 Vzdát = Escape nebo gamepad SELECT.** Originál ESC. PageUp/PageDown/R zůstávají jako výběr levelu
   a restart bez ztráty života (pomůcka, originál je nemá). Ekvalizér ukazuje nuly, když je hudba ztlumená (M).
 - **2026-10-08 Screenshoty od levelu 12 z upravené verze.** Mají jiné životy a jiný glyf v rohu ikony noty;

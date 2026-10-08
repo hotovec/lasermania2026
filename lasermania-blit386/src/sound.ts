@@ -70,6 +70,7 @@ export class Sound {
     private songs = new Map<Song, AudioClip>();
     private sfx = new Map<SoundEvent, AudioClip>();
     private current: Song | null = null;
+    private wanted: Song | null = null; // naposledy vyžádaná skladba (může se ještě načítat)
     private startTick: number | null = null; // BT.ticks skutečného startu skladby (po odemčení zvuku)
     private readonly vols = [0, 0, 0];
     /** Posledních pár přehraných efektů (jen pro dev hook / testy). */
@@ -79,20 +80,32 @@ export class Sound {
         return this.current;
     }
 
-    async load(): Promise<void> {
-        const clips = await AudioClip.loadAll([
-            ...SONGS.map((s) => SONG_URLS[s]),
-            ...SFX_NAMES.map((n) => SFX_URLS[n]),
-        ]);
-        SONGS.forEach((s, i) => this.songs.set(s, clips[i]));
-        SFX_NAMES.forEach((n, i) => this.sfx.set(n, clips[SONGS.length + i]));
+    /**
+     * Načte skladbu `first` (titulka) a efekty; ostatní skladby (~17 MB) se dotahují na pozadí a skladba
+     * vyžádaná dřív, než dorazí, začne hrát po načtení.
+     */
+    async load(first: Song): Promise<void> {
+        const clips = await AudioClip.loadAll([SONG_URLS[first], ...SFX_NAMES.map((n) => SFX_URLS[n])]);
+        this.songs.set(first, clips[0]);
+        SFX_NAMES.forEach((n, i) => this.sfx.set(n, clips[1 + i]));
+        for (const s of SONGS) {
+            if (s === first) continue;
+            AudioClip.load(SONG_URLS[s]).then(
+                (clip) => {
+                    this.songs.set(s, clip);
+                    if (this.wanted === s) this.playSong(s);
+                },
+                (err: unknown) => console.warn(`skladba ${s} se nenačetla`, err),
+            );
+        }
     }
 
     /** Pustí skladbu se smyčkou z music.json (úvod jednou, pak dokola); stejnou skladbu nerestartuje. */
     playSong(song: Song): void {
+        this.wanted = song;
         if (song === this.current) return;
         const clip = this.songs.get(song);
-        if (!clip) return;
+        if (!clip) return; // ještě se načítá: pustí ji load()
         this.current = song;
         this.startTick = BT.isAudioUnlocked ? BT.ticks : null;
         BT.musicPlay(clip, LOOPS[song]);
