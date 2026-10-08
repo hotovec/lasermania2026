@@ -53,7 +53,13 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
     (originální kód titulky v emulátoru 6502), skladba 0 a `vu.json` v `npm run sound`.
     *Stav:* testy `tests/ui.test.js`; render stavového řádku = screenshoty levelů 0–11 pixel po pixelu (mimo
     ekvalizér), titulka z emulátoru vykreslená do PNG (pole, písmena, titulky, scroller, ©).
-  - [ ] **M6b Stavový řádek + životy v portu** – ESC = −1 život, výhra +1, konec hry; ekvalizér.
+  - [x] **M6b Stavový řádek + životy v portu** – ESC = −1 život, výhra +1, konec hry; ekvalizér.
+    *Stav:* `src/statusbar.ts` (panely + inverzní font, všech 120 buněk), ekvalizér z `vu.json` podle času od
+    startu skladby (`Sound.volumes`). Životy: start 5, ESC / gamepad SELECT = −1 a restart, na „00“ konec hry
+    (zatím nová hra od levelu 0), výhra +1. `compare_screen.js` kreslí stavový řádek (životy n + 5) a maskuje jen
+    ekvalizér (+ životy a roh noty u screenshotů od levelu 12, upravená verze): reference = 53 screenshotů,
+    snímek portu = reference na WebGPU i Canvas 2D. `blit play`: ESC 5 → 4, 1 → konec hry, výhra 5 → 6,
+    ekvalizér se hýbe s hudbou.
   - [ ] **M6c Titulka v portu** – scény titulka → hra → titulka / vítězná obrazovka, START/fire, skladba 0.
   - [ ] **M6d** Animace dalšího levelu (`L_9720`), editor (pointer), případně HTML kolem canvasu.
 - [ ] **M7 Doladění** – CRT efekty jen na WebGPU, test `?backend=software`, Safari (MP3), build a nasazení.

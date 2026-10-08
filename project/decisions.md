@@ -2,6 +2,11 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Vzdát = Escape nebo gamepad SELECT.** Originál ESC. PageUp/PageDown/R zůstávají jako výběr levelu
+  a restart bez ztráty života (pomůcka, originál je nemá). Ekvalizér ukazuje nuly, když je hudba ztlumená (M).
+- **2026-10-08 Screenshoty od levelu 12 z upravené verze.** Mají jiné životy a jiný glyf v rohu ikony noty;
+  porovnání tam tyto buňky maskuje. Levely 0–11 sedí včetně životů (level + 5).
+
 - **2026-10-08 Titulka a stavový řádek podle originálu 1990, životy jako originál.** Volba uživatele (verze 2020
   od PG má jinou grafiku titulky, návod přes SELECT a stavový řádek bez ekvalizéru).
 - **2026-10-08 Titulka = originální kód v emulátoru 6502.** Engine létajících písmen (`$5DC0`) je samomodifikující

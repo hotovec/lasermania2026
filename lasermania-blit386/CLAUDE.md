@@ -165,8 +165,11 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
 - `drawSprite` v 1.7.1 neumí rotaci → tank = originální PMG snímky směrů (nic se neotáčí).
 - Zvuk (`src/sound.ts`): předrenderovaný `npm run sound` (z kořene, `../js-demo/tools/render_music.js --all`) do
   `../js-demo/data/sound/` (OGG + MP3, `music.json` se smyčkami, `sfx/*.wav`), importy
-  `@lasermania/js-demo/sound/...?url`. `BT.musicPlay` s `loopStart/loopEnd`; titulka skladba 3 (M6), ve hře 1/2
-  podle `level & 4`. Efekty: `LMCore.takeEvents(state)` → `Sound.playEvents` → `BT.soundPlay`. M / N ztlumí hudbu /
-  efekty. `state()` má `song`, `musicPlaying`, `audioUnlocked`, `musicMuted`, `sfxMuted`, `sounds`.
+  `@lasermania/js-demo/sound/...?url`. `BT.musicPlay` s `loopStart/loopEnd`; titulka skladba 3 (M6), ve hře 1/2 podle
+  `level & 4`. Efekty: `LMCore.takeEvents(state)` → `Sound.playEvents` → `BT.soundPlay`. M / N ztlumí hudbu / efekty.
+  `state()` má `song`, `musicPlaying`, `audioUnlocked`, `musicMuted`, `sfxMuted`, `sounds`.
+- Stavový řádek (`src/statusbar.ts`): `@lasermania/js-demo/ui` (`statusbarCells`, `Equalizer`), y 208, panely sloty
+  8–10. Životy: start 5, Escape / SELECT = −1, výhra +1. `state()` má `lives`, `gameOvers`, `eqPeaks`; `setLives(n)`;
+  `load(n, …)` nastaví životy n + 5 (stav screenshotů).
 - API ověřuj v `node_modules/blit386/dist/blit386.d.ts` (v monorepu je node_modules v kořeni: `../node_modules/`).
 - Po každé změně: `npm run check` z kořene (golden testy + `tsc`).

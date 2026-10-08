@@ -10,6 +10,7 @@ import LMCore, { type GameState } from '@lasermania/js-demo/core';
 import LMTiles from '@lasermania/js-demo/tiles';
 import data from '@lasermania/js-demo/data.json';
 import { levelSong, type Song, Sound } from './sound';
+import { StatusBar } from './statusbar';
 
 // Paleta (slot 0 je vždy průhledný). Barvy PAL z originálu: pozadí, PF0 $22, PF1 $C4, PF2 $7C, PF3 $96.
 // Index dlaždice v (0 pozadí, 1-4 PF0-PF3) leží ve slotu v + 1.
@@ -21,10 +22,13 @@ const C_PF3 = 5;
 // Tank (PMG): index 1 = P0 žlutá $1E, 2 = P1 růžová $4A -> sloty 6 a 7.
 const C_TANK_P0 = 6;
 const C_TANK_P1 = 7;
+// Šedé panely stavového řádku (PMG $08, $06, $0A) od slotu 8.
+const C_PANEL = 8;
 
 const GAME_STEP_TICKS = 8; // herní smyčka originálu: 8 snímků = 160 ms
 const WIN_DELAY_TICKS = 80; // po vjezdu do východu další level za 1,6 s (jako js-demo)
 const LAST_LEVEL = data.levels.length - 1;
+const START_LIVES = 5; // L_6B7D: nová hra 5 životů (stavový řádek ukazuje 04)
 // Opakování pohybu při držení až po 480 ms nepřetržitého držení od stisku. Remake (control2.update,
 // repeat_delay_first) čeká 2 kroky od hranice kroku, takže hranice kolísá 330-480 ms podle fáze stisku
 // a stisk kolem 400 ms občas popojel o 2 políčka; tady je to horní mez, nezávislá na fázi.
@@ -41,6 +45,8 @@ const CELL = 8; // buňka paprsku = znak 8x8, mřížka 32x24
 const KEY_NEXT = 'PageDown';
 const KEY_PREV = 'PageUp';
 const KEY_RESTART = 'KeyR';
+// Vzdát level za život (originál: ESC, KBCODE $1C); gamepad SELECT.
+const KEY_GIVE_UP = 'Escape';
 // Zvuk: M hudba, N efekty (zap/vyp).
 const KEY_MUSIC = 'KeyM';
 const KEY_SFX = 'KeyN';
@@ -101,8 +107,14 @@ interface DevHook {
         sfxMuted: boolean;
         /** posledních pár přehraných efektů */
         sounds: string[];
+        lives: number;
+        gameOvers: number;
+        /** špičky ekvalizéru 3 kanálů (0-7) */
+        eqPeaks: number[];
     };
+    /** Zmrazený stav levelu n; životy n + 5 jako při hře od levelu 0 (stav screenshotů). */
     load(n: number, steps?: number, phase?: number): void;
+    setLives(n: number): void;
     /** Fixture pro testy: tank na políčko `pos` (řádek*16 + sloupec). */
     setTank(pos: number): void;
     /** Fixture pro testy: dlaždice `code` na políčko `pos`. */
@@ -125,6 +137,8 @@ class Game {
     private blockedStart: number | null = null; // pokus o pohyb do překážky: 8 snímků „zablokovaného“ tanku
     private winAt: number | null = null; // BT.ticks vjezdu do východu
     private finished = false; // dohrán poslední level
+    private lives = START_LIVES;
+    private gameOvers = 0; // jen dev hook: kolikrát skončila hra
     private readonly drawPos = new Vector2i(0, 0);
     private tiles!: SpriteSheet;
     private tileRects: Rect2i[] = [];
@@ -135,6 +149,7 @@ class Game {
     private beamRects: Rect2i[] = [];
     private beamPos: Vector2i[] = [];
     private readonly sound = new Sound();
+    private readonly statusBar = new StatusBar();
 
     configure() {
         return {
@@ -146,7 +161,7 @@ class Game {
     }
 
     async init(): Promise<boolean> {
-        const palette = BT.paletteCreate(16);
+        const palette = BT.paletteCreate(32);
         palette.set(C_BLACK, new Color32(0, 0, 0, 255));
         palette.set(C_PF0, new Color32(0x59, 0x0f, 0x00, 255));
         palette.set(C_PF1, new Color32(0x24, 0x62, 0x00, 255));
@@ -154,6 +169,7 @@ class Game {
         palette.set(C_PF3, new Color32(0x2e, 0x69, 0x9c, 255));
         palette.set(C_TANK_P0, new Color32(0xdf, 0xd7, 0x77, 255));
         palette.set(C_TANK_P1, new Color32(0xc9, 0x6e, 0xd7, 255));
+        this.statusBar.init(palette, C_BLACK, C_PANEL);
         BT.paletteSet(palette);
 
         // hráč 0: WASD (výchozí, jako wasd_keys v remaku) + šipky; gamepad hráče 0 se slučuje sám
@@ -212,10 +228,14 @@ class Game {
                         musicMuted: BT.isAudioMuted('music'),
                         sfxMuted: BT.isAudioMuted('sfx'),
                         sounds: [...this.sound.recent],
+                        lives: this.lives,
+                        gameOvers: this.gameOvers,
+                        eqPeaks: [...this.statusBar.eq.peak],
                     };
                 },
                 load: (n, steps, phase) => {
                     this.load(n);
+                    this.lives = this.levelNo + START_LIVES;
                     if (steps === undefined) return;
                     for (let k = 0; k < steps; k++) LMCore.tick(this.state);
                     if (steps === 0) {
@@ -225,6 +245,9 @@ class Game {
                     }
                     this.frozen = true;
                     this.frozenPhase = phase ?? null;
+                },
+                setLives: (n) => {
+                    this.lives = n;
                 },
                 setTank: (pos) => {
                     this.state.tank = pos;
@@ -313,7 +336,17 @@ class Game {
         return SpriteSheet.fromIndexedPixels(width, CELL, pixels);
     }
 
+    // nová hra od levelu n (L_6B7D)
+    private startGame(n: number): void {
+        this.lives = START_LIVES;
+        this.load(n);
+    }
+
     update(): void {
+        // VBI: přehrávač a ekvalizér běží každý snímek
+        this.sound.update();
+        this.statusBar.eq.step(this.sound.volumes());
+
         if (BT.isKeyPressed(KEY_NEXT)) this.load(this.levelNo + 1);
         else if (BT.isKeyPressed(KEY_PREV)) this.load(this.levelNo - 1);
         else if (BT.isKeyPressed(KEY_RESTART)) this.load(this.levelNo);
@@ -321,9 +354,19 @@ class Game {
         if (BT.isKeyPressed(KEY_SFX)) BT.audioMuteSet('sfx', !BT.isAudioMuted('sfx'));
         if (this.frozen) return;
 
+        // vzdát (ESC, $9436): -1 život a znovu stejný level; poslední život ("00") -> konec hry
+        if ((BT.isKeyPressed(KEY_GIVE_UP) || BT.isPressed(BT.BTN_SELECT, 0)) && !this.state.won && !this.finished) {
+            this.lives--;
+            if (this.lives > 0) this.load(this.levelNo);
+            else this.gameOver();
+            return;
+        }
+
         if (this.winAt !== null && BT.ticks - this.winAt >= WIN_DELAY_TICKS && !this.finished) {
-            if (this.levelNo < LAST_LEVEL) this.load(this.levelNo + 1);
-            else this.finished = true; // originál po levelu $53 končí
+            if (this.levelNo < LAST_LEVEL) {
+                this.lives++; // $946C: další level a život navíc
+                this.load(this.levelNo + 1);
+            } else this.finished = true; // originál po levelu $53 končí
         }
 
         // vstup čte každý snímek (VBI control2), uloží první směr od posledního kroku (result_direction);
@@ -351,6 +394,12 @@ class Game {
         this.pending = null;
         LMCore.tick(this.state);
         this.sound.playEvents(LMCore.takeEvents(this.state)); // události z move i tick
+    }
+
+    // konec hry ($944C); titulka přijde v M6c, zatím nová hra od levelu 0
+    private gameOver(): void {
+        this.gameOvers++;
+        this.startGame(0);
     }
 
     // pauza před opakováním (podle control2.update): nový stisk pohne tankem hned; stejný směr držený nepřetržitě
@@ -447,9 +496,9 @@ class Game {
             this.drawPos.set(x, y);
             BT.drawSprite(this.tank, this.tankRects[frame], this.drawPos);
         }
-        // dočasné hlášky do stavového řádku (M6 ho nahradí originálním)
-        if (this.finished) BT.systemPrint(new Vector2i(PF_X, 212), C_PF2, 'VSECHNY LEVELY HOTOVE');
-        else if (this.winAt !== null) BT.systemPrint(new Vector2i(PF_X, 212), C_PF2, 'LEVEL HOTOVY');
+        this.statusBar.render(this.lives, this.levelNo);
+        // dočasná hláška, vítězná obrazovka přijde v M6c
+        if (this.finished) BT.systemPrint(new Vector2i(PF_X, 190), C_PF2, 'VSECHNY LEVELY HOTOVE');
     }
 }
 

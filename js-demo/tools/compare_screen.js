@@ -6,16 +6,21 @@
 // Screenshot nemusí být ze startu: data/screens.json říká, po kolika herních krocích vznikl, v jaké fázi je animace
 // paprsku a kolik buněk paprsku originál stihl nakreslit (double buffer); reference i snímek portu se dělají ve
 // stejném stavu (port přes __game.load(n, kroky, fáze)). Políčka `tiles` se liší z jiného důvodu.
-// Maskuje se jen stavový řádek (M6) a u snímku portu nedokreslený konec paprsku. Snímek portu musí s referencí
-// souhlasit vždy úplně. Exit 1 při jiném rozdílu.
+// Stavový řádek: reference ho kreslí s životy n + 5 (hra od levelu 0) a prázdným ekvalizérem; maskuje se
+// ekvalizér (podle hudby) a u screenshotů od levelu 12 číslice životů a horní levý roh noty (screenshoty jsou
+// zřejmě z upravené verze: jiná hodnota životů a jiný glyf ve sloupcích 24-25 řádku 0). U snímku
+// portu se maskuje nedokreslený konec paprsku. Snímek portu musí s referencí souhlasit vždy (mimo ekvalizér).
+// Exit 1 při jiném rozdílu.
 //   node tools/compare_screen.js --search <level>     najde stav screenshotu (kroky, fáze, počet buněk paprsku)
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import LMCore from '../esm/core.js';
 import LMTiles from '../esm/tiles.js';
+import LMUi from '../esm/ui.js';
 
-export const SCREEN_W = 320, SCREEN_H = 240, PF_X = 32, PF_Y = 12, CROP_X = 32, STATUS_Y = 204;
+export const SCREEN_W = 320, SCREEN_H = 240, PF_X = 32, PF_Y = 12, CROP_X = 32, STATUS_Y = 208;
+const EQ_X = LMUi.EQ_COL * 8, LIVES_X = 8 * 8, NOTE_X = 24 * 8, LIVES_RELIABLE = 12;   // screenshoty od levelu 12: jiné životy
 const ROOT = new URL('../../', import.meta.url);
 
 // ---- minimální čtečky: TIFF (nekomprimované RGB 8 bit, strips) a PNG (8 bit RGB/RGBA, bez prokládání) ----
@@ -92,7 +97,23 @@ export function levelState(level, ticks = 0) {
 }
 
 // snímek ze stavu: dlaždice, paprsek (prvních `beamCells` buněk ve fázi `beamPhase`), tank – jako port
-export function renderState(st, beamPhase = 0, beamCells = Infinity) {
+let STATUS_FONT;
+// stavový řádek jako v portu: panely, inverzní font $8400, životy n + 5 a level n, ekvalizér prázdný
+function renderStatus(rgb, level) {
+  STATUS_FONT ??= LMTiles.b64(DATA.statusFont);
+  const cells = LMUi.statusbarCells(LMUi.toBcd((level + 5) % 100), LMUi.toBcd(level % 100), null), g = new Uint8Array(64);
+  for (const p of LMUi.STATUS_PANELS) {
+    const c = LMUi.atariRGB(p.color);
+    for (let y = 0; y < 24; y++) for (let x = p.col * 8; x < (p.col + p.cols) * 8; x++) rgb.set(c, ((STATUS_Y + y) * SCREEN_W + x) * 3);
+  }
+  for (let i = 0; i < cells.length; i++) {
+    LMUi.decodeChar2(STATUS_FONT, cells[i], g, 0, 8);
+    const x0 = (i % 40) * 8, y0 = STATUS_Y + Math.floor(i / 40) * 8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (g[y * 8 + x]) rgb.set([0, 0, 0], ((y0 + y) * SCREEN_W + x0 + x) * 3);
+  }
+}
+
+export function renderState(st, beamPhase = 0, beamCells = Infinity, level = 0) {
   TILES ??= LMTiles.decodeTiles(LMTiles.b64(DATA.font1), LMTiles.b64(DATA.font2));
   TANK_PX ??= LMTiles.decodeTank(LMTiles.b64(DATA.tankPmg));
   BEAM_PX ??= LMTiles.decodeBeam();
@@ -100,11 +121,12 @@ export function renderState(st, beamPhase = 0, beamCells = Infinity) {
     { cells: st.cells.slice(0, beamCells), phase: beamPhase, glyphs: BEAM_PX });
   const rgb = new Uint8Array(SCREEN_W * SCREEN_H * 3);   // mimo hrací plochu černá (pozadí)
   for (let y = 0; y < 192; y++) for (let x = 0; x < 256; x++) rgb.set(REF_PAL[pf[y * 256 + x]], ((PF_Y + y) * SCREEN_W + PF_X + x) * 3);
+  renderStatus(rgb, level);
   return { width: SCREEN_W, height: SCREEN_H, rgb };
 }
 
 export function referenceFrame(level, { ticks = 0, beamPhase = 0, beamCells = Infinity } = {}) {
-  return renderState(levelState(level, ticks), beamPhase, beamCells);
+  return renderState(levelState(level, ticks), beamPhase, beamCells, level.n ?? 0);
 }
 
 export function screenshotFrame(level) {
@@ -118,10 +140,13 @@ const same = (a, b, o) => a.rgb[o] === b.rgb[o] && a.rgb[o + 1] === b.rgb[o + 1]
 const tileOf = i => { const x = (i % SCREEN_W) - PF_X, y = Math.floor(i / SCREEN_W) - PF_Y;
   return x >= 0 && x < 256 && y >= 0 && y < 192 ? (y >> 4) * 16 + (x >> 4) : -1; };
 
-// 1 = očekávaný rozdíl: stavový řádek a vše pod hrací plochou; s `full`/`partial` navíc pixely, kde se plný
-// a nedokreslený paprsek liší (pro snímek portu vs. screenshot)
-export function expectedMask(full, partial) {
-  const m = new Uint8Array(SCREEN_W * SCREEN_H).fill(1, STATUS_Y * SCREEN_W);
+// 1 = očekávaný rozdíl: ekvalizér; se `screenshot` (level n) u levelů od 12 číslice životů a roh noty; s `full`/`partial`
+// navíc pixely, kde se plný a nedokreslený paprsek liší (pro snímek portu vs. screenshot)
+export function expectedMask({ full, partial, screenshot = null } = {}) {
+  const m = new Uint8Array(SCREEN_W * SCREEN_H);
+  const box = (x0, w, h = 24) => { for (let y = STATUS_Y; y < STATUS_Y + h; y++) m.fill(1, y * SCREEN_W + x0, y * SCREEN_W + x0 + w); };
+  box(EQ_X, LMUi.EQ_WIDTH * 8);
+  if (screenshot !== null && screenshot >= LIVES_RELIABLE) { box(LIVES_X, 32); box(NOTE_X, 16, 8); }
   if (full && partial) for (let i = 0; i < STATUS_Y * SCREEN_W; i++) if (!same(full, partial, i * 3)) m[i] = 1;
   return m;
 }
@@ -160,13 +185,14 @@ export const allowedTiles = n => new Set((SCREENS[n]?.tiles ?? []).map(([c, r]) 
 function compareLevel(n, captureFile, diffFile) {
   const level = DATA.levels[n], { ticks, beamPhase, beamCells } = screenState(n), allowed = allowedTiles(n);
   const full = referenceFrame(level, { ticks, beamPhase }), partial = referenceFrame(level, { ticks, beamPhase, beamCells });
-  const shot = screenshotFrame(level), statusMask = expectedMask(), tailMask = expectedMask(full, partial);
+  const shot = screenshotFrame(level), statusMask = expectedMask({ screenshot: n });
+  const tailMask = expectedMask({ full, partial, screenshot: n });
   const rows = [['reference vs. screenshot', diff(partial, shot, statusMask, allowed)]];
   let cap = null;
   if (captureFile) {
     cap = readPng(fs.readFileSync(captureFile));
     if (cap.width !== SCREEN_W || cap.height !== SCREEN_H) throw new Error(`${captureFile}: ${cap.width}×${cap.height}, čekám ${SCREEN_W}×${SCREEN_H}`);
-    rows.push(['capture vs. reference', diff(cap, full, null)], ['capture vs. screenshot', diff(cap, shot, tailMask, allowed)]);
+    rows.push(['capture vs. reference', diff(cap, full, expectedMask())], ['capture vs. screenshot', diff(cap, shot, tailMask, allowed)]);
   }
   if (diffFile) writePng(diffFile, cap ? diffImage(cap, shot, tailMask, allowed) : diffImage(partial, shot, statusMask, allowed));
   return rows;
@@ -174,17 +200,17 @@ function compareLevel(n, captureFile, diffFile) {
 
 // najde stav screenshotu: nejmenší počet kroků, fázi a počet nakreslených buněk paprsku s nejmenším rozdílem
 export function searchScreen(n, maxTicks = 300) {
-  const level = DATA.levels[n], shot = screenshotFrame(level), mask = expectedMask(), allowed = allowedTiles(n);
+  const level = DATA.levels[n], shot = screenshotFrame(level), mask = expectedMask({ screenshot: n }), allowed = allowedTiles(n);
   let best = null;
   for (let ticks = 0; ticks <= maxTicks; ticks++) {
     const st = levelState(level, ticks);
     // mapa a tank bez paprsku: pixely buněk paprsku ignorovat (zjistí, jestli má smysl zkoušet fáze a délky)
-    const noBeam = renderState(st, 0, 0), beamMask = mask.slice();
+    const noBeam = renderState(st, 0, 0, n), beamMask = mask.slice();
     for (const c of st.cells) for (let y = 0; y < 8; y++) beamMask.fill(1, (PF_Y + c.y * 8 + y) * SCREEN_W + PF_X + c.x * 8, (PF_Y + c.y * 8 + y) * SCREEN_W + PF_X + c.x * 8 + 8);
     const mapDiff = diff(noBeam, shot, beamMask, allowed).outside;
     if (best && mapDiff > best.diff) continue;
     for (let beamPhase = 0; beamPhase < 4; beamPhase++) for (let cells = st.cells.length; cells >= 0; cells--) {
-      const d = diff(renderState(st, beamPhase, cells), shot, mask, allowed).outside;
+      const d = diff(renderState(st, beamPhase, cells, n), shot, mask, allowed).outside;
       if (!best || d < best.diff) best = { ticks, beamPhase, beamCells: cells, of: st.cells.length, diff: d };
       if (!d) return best;
     }

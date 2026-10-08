@@ -1,10 +1,14 @@
 // Hudba a efekty. Předrenderované v Node ze stejného emulátoru 6502 + POKEY jako demo
 // (../js-demo/tools/render_music.js --all, `npm run sound`): skladby CMC v OGG + MP3 s body smyčky
-// v music.json, efekty SFXPlayer ve WAV. Vite soubory zabalí do buildu (importy `?url`).
+// v music.json, hlasitosti kanálů po snímcích ve vu.json (ekvalizér), efekty SFXPlayer ve WAV. Vite soubory
+// zabalí do buildu (importy `?url`).
 
 import { AudioClip, BT } from 'blit386';
 import type { SoundEvent } from '@lasermania/js-demo/core';
 import music from '@lasermania/js-demo/sound/music.json';
+import vu from '@lasermania/js-demo/sound/vu.json';
+import song0Ogg from '@lasermania/js-demo/sound/song0.ogg?url';
+import song0Mp3 from '@lasermania/js-demo/sound/song0.mp3?url';
 import song1Ogg from '@lasermania/js-demo/sound/song1.ogg?url';
 import song1Mp3 from '@lasermania/js-demo/sound/song1.mp3?url';
 import song2Ogg from '@lasermania/js-demo/sound/song2.ogg?url';
@@ -25,11 +29,12 @@ import sensor from '@lasermania/js-demo/sound/sfx/sensor.wav?url';
 import step from '@lasermania/js-demo/sound/sfx/step.wav?url';
 import win from '@lasermania/js-demo/sound/sfx/win.wav?url';
 
-/** 3 = titulka, 1 a 2 = ve hře. */
-export type Song = 1 | 2 | 3;
+/** 0 = titulka, 1 a 2 = ve hře, 3 = vítězná obrazovka. */
+export type Song = 0 | 1 | 2 | 3;
 
 // OGG, záloha MP3 (Safari)
 const SONG_URLS: Record<Song, string[]> = {
+    0: [song0Ogg, song0Mp3],
     1: [song1Ogg, song1Mp3],
     2: [song2Ogg, song2Mp3],
     3: [song3Ogg, song3Mp3],
@@ -50,7 +55,9 @@ const SFX_URLS: Record<SoundEvent, string> = {
     win,
 };
 const LOOPS = music as Record<string, { loopStart: number; loopEnd: number }>;
-const SONGS: Song[] = [1, 2, 3];
+const SONGS: Song[] = [0, 1, 2, 3];
+const VU = vu as unknown as Record<string, string> & { rate: number };
+const TICKS_PER_SECOND = 50; // targetFPS portu
 const SFX_NAMES = Object.keys(SFX_URLS) as SoundEvent[];
 const RECENT = 8; // kolik posledních efektů drží `recent` (dev hook)
 
@@ -63,6 +70,8 @@ export class Sound {
     private songs = new Map<Song, AudioClip>();
     private sfx = new Map<SoundEvent, AudioClip>();
     private current: Song | null = null;
+    private startTick: number | null = null; // BT.ticks skutečného startu skladby (po odemčení zvuku)
+    private readonly vols = [0, 0, 0];
     /** Posledních pár přehraných efektů (jen pro dev hook / testy). */
     readonly recent: SoundEvent[] = [];
 
@@ -85,7 +94,33 @@ export class Sound {
         const clip = this.songs.get(song);
         if (!clip) return;
         this.current = song;
+        this.startTick = BT.isAudioUnlocked ? BT.ticks : null;
         BT.musicPlay(clip, LOOPS[song]);
+    }
+
+    /** Každý tick: zapamatuje si, kdy skladba opravdu začala hrát (BT.musicPlay čeká na první stisk). */
+    update(): void {
+        if (this.current !== null && this.startTick === null && BT.isAudioUnlocked) this.startTick = BT.ticks;
+    }
+
+    /**
+     * Hlasitosti 3 kanálů CMC v právě hraném snímku skladby (vu.json, se smyčkou podle music.json) pro ekvalizér;
+     * nuly, když hudba nehraje nebo je ztlumená.
+     */
+    volumes(): number[] {
+        const song = this.current;
+        this.vols.fill(0);
+        if (song === null || this.startTick === null || BT.isAudioMuted('music') || BT.isAudioMuted('main')) {
+            return this.vols;
+        }
+        const frames = VU[song];
+        const loop = LOOPS[song];
+        const start = Math.round(loop.loopStart * VU.rate);
+        const end = frames.length / 3;
+        let f = Math.floor(((BT.ticks - this.startTick) / TICKS_PER_SECOND) * VU.rate);
+        if (f >= end) f = start + ((f - start) % (end - start));
+        for (let k = 0; k < 3; k++) this.vols[k] = Number.parseInt(frames[f * 3 + k], 16);
+        return this.vols;
     }
 
     /** Efekty pro události logiky (LMCore.takeEvents); před prvním stiskem je prohlížeč zahodí. */
