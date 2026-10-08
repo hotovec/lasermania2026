@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "npm run dev -w lasermania-blit386",
     "build": "npm run build -w lasermania-blit386",
+    "deploy": "npm run build && .bin/deploy-demo.sh",
     "typecheck": "npm run typecheck -w lasermania-blit386",
     "test": "npm test -w @lasermania/js-demo",
     "check": "npm test && npm run typecheck",
