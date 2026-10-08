@@ -46,6 +46,14 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
   `render_music.js --seam n` = 10 s WAV kolem švu na poslech. Port `src/sound.ts`: skladba podle levelu (`n & 4`),
   efekty na události `move` i `tick`, M / N ztlumí hudbu / efekty. `blit play` (WebGPU i Canvas 2D): po stisku
   `audioUnlocked`, `musicPlaying`, level 0 → skladba 1, level 4 → 2, kroky → `step`, `sensor`; M/N ztlumí; snímky
-  53 levelů beze změny. Titulka (skladba 3) až v M6. Poslech v prohlížeči: uživatel.
-- [ ] **M6 UI** – stavový řádek (originální `8400_statusbar.fnt`), editor (pointer), případně HTML kolem canvasu.
+  53 levelů beze změny. Titulka (skladba 0, viz M6). Poslech v prohlížeči: uživatel.
+- [ ] **M6 UI** – titulka a stavový řádek podle originálu 1990, životy jako originál (volba uživatele).
+  - [x] **M6a Data a dekodéry** – `statusFont` ($8400) a `titleMem` (RAM $5400–$93FF) v `lasermania.json`,
+    `js-demo/js/lm-ui.js` (`@lasermania/js-demo/ui`): `statusbarCells`, `Equalizer`, `atariRGB`, `TitleMachine`
+    (originální kód titulky v emulátoru 6502), skladba 0 a `vu.json` v `npm run sound`.
+    *Stav:* testy `tests/ui.test.js`; render stavového řádku = screenshoty levelů 0–11 pixel po pixelu (mimo
+    ekvalizér), titulka z emulátoru vykreslená do PNG (pole, písmena, titulky, scroller, ©).
+  - [ ] **M6b Stavový řádek + životy v portu** – ESC = −1 život, výhra +1, konec hry; ekvalizér.
+  - [ ] **M6c Titulka v portu** – scény titulka → hra → titulka / vítězná obrazovka, START/fire, skladba 0.
+  - [ ] **M6d** Animace dalšího levelu (`L_9720`), editor (pointer), případně HTML kolem canvasu.
 - [ ] **M7 Doladění** – CRT efekty jen na WebGPU, test `?backend=software`, Safari (MP3), build a nasazení.

@@ -13,7 +13,7 @@ const INV_ORIG = [
 ].map(t => t & 4);
 const PAL = ['#000000', '#590f00', '#246200', '#a9aee0', '#2e699c'];   // pozadí, PF0 $22, PF1 $C4, PF2 $7C, PF3 $96
 
-const TANK_PAL = ['#dfd777', '#c96ed7'];   // tank: P0 žlutá $C8, P1 růžová $A4 (L_9FBE_gamecolors)
+const TANK_PAL = ['#dfd777', '#c96ed7'];   // tank: P0 žlutá $1E, P1 růžová $4A (L_9FBE_gamecolors)
 const TANK_FRAMES = 16;
 
 const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));

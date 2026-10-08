@@ -9,6 +9,10 @@
       "types": "./esm/core.d.ts",
       "default": "./esm/core.js"
     },
+    "./ui": {
+      "types": "./esm/ui.d.ts",
+      "default": "./esm/ui.js"
+    },
     "./tiles": {
       "types": "./esm/tiles.d.ts",
       "default": "./esm/tiles.js"

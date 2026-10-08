@@ -2,6 +2,20 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Titulka a stavový řádek podle originálu 1990, životy jako originál.** Volba uživatele (verze 2020
+  od PG má jinou grafiku titulky, návod přes SELECT a stavový řádek bez ekvalizéru).
+- **2026-10-08 Titulka = originální kód v emulátoru 6502.** Engine létajících písmen (`$5DC0`) je samomodifikující
+  kód se softwarovými sprity; místo přepisu běží `$6AB7` v `CPU` z `atari-audio.js` nad RAM z dumpu
+  (`lm-ui.js` `TitleMachine`) a kreslí se jeho obrazovka a fonty. Tempo z počtu cyklů (rozpočet 20 000 na snímek,
+  odhad). Stavový řádek je jednoduchý, ten je přepsaný do JS.
+- **2026-10-08 Barvy Atari mimo screenshoty z modelu.** Přesnou paletu emulátoru screenshotů nemáme; `atariRGB`
+  vrací známé barvy přesně a ostatní z YUV modelu nafitovaného na ně (odchylka ~10). Oprava: tank má barvy
+  `$1E`/`$4A` (`L_9FBE`), ne `$C8`/`$A4` – RGB ve hře byly správně, popisky ne.
+- **2026-10-08 Titulka hraje skladbu 0, skladba 3 je vítězná obrazovka.** Podle kódu (`$6D4E`, `$6E3A`); dřívější
+  záznam „titulka 3“ byl omyl.
+- **2026-10-08 Ekvalizér z předpočítaných hlasitostí.** blit386 1.7.1 neumí pozici přehrávané hudby; `vu.json`
+  má hlasitosti kanálů po snímcích, port je čte podle času od startu skladby (`BT.ticks`) se smyčkou z `music.json`.
+
 - **2026-10-08 Zvuk portu předrenderovaný z emulátoru dema.** `render_music.js --all` (Node) renderuje skladby 1–3
   a efekty stejným kódem jako demo (`atari-audio.js`); port je hraje jako `AudioClip`. Důvod: blit386 hraje jen
   klipy (`BT.musicPlay` / `BT.soundPlay`), živá emulace by obcházela engine; render 200 s hudby za běhu trvá
@@ -76,5 +90,6 @@ Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
   `tsc` (chybí typy WebGPU uvnitř balíčku).
 - **2026-10-08 Hudba v portu předrenderovaná.** blit386 nemá API pro streamování vzorků ani vlastní audio uzly.
 - **2026-10-08 Barevný bit `$04` z originální tabulky.** Remake ho u několika dlaždic změnil, sedí to na screenshoty.
-- **2026-10-08 Skladby: titulka 3, hra 1/2 po 4 levelech.** Podle kódu originálu (`$6E3A`, `$9897`).
+- **2026-10-08 Skladby: titulka 3, hra 1/2 po 4 levelech.** Podle kódu originálu (`$6E3A`, `$9897`). *Opraveno výše:
+  titulka je skladba 0.*
 - **2026-10-08 Herní krok 160 ms (8 snímků PAL).** Podle hlavní smyčky originálu.

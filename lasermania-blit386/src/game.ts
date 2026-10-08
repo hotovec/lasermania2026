@@ -18,7 +18,7 @@ const C_PF0 = 2;
 const C_PF1 = 3;
 const C_PF2 = 4;
 const C_PF3 = 5;
-// Tank (PMG): index 1 = P0 žlutá $C8, 2 = P1 růžová $A4 -> sloty 6 a 7.
+// Tank (PMG): index 1 = P0 žlutá $1E, 2 = P1 růžová $4A -> sloty 6 a 7.
 const C_TANK_P0 = 6;
 const C_TANK_P1 = 7;
 

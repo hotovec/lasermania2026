@@ -12,7 +12,8 @@ Použití (z kořene monorepa):
 Čte:
     a400_ingame1.fnt, a800_ingame2.fnt   originální fonty dlaždic (horní / dolní řádek)
     compression/levels.xex               data levelů (surová, načítají se na $1A00)
-    tool_stuff/lmdump0300                RAM dump originální hry od $0300 (tank PMG $8700, hudba CMC $7700 + přehrávač $8900)
+    tool_stuff/lmdump0300                RAM dump originální hry od $0300 (tank PMG $8700, hudba CMC $7700 + přehrávač $8900,
+                                         font stavového řádku $8400, titulka $5400-$93FF)
 """
 import argparse, base64, json, os
 
@@ -62,6 +63,11 @@ def main():
         # tank: PMG data P0 (žlutá) $8700 a P1 (růžová) $8800, 16 snímků po 16 B
         'tankPmg': base64.b64encode(dump[0x8700 - 0x300:0x8900 - 0x300]).decode(),
         'musicMem': base64.b64encode(dump[0x7700 - 0x300:0x9000 - 0x300]).decode(),
+        # stavový řádek: font $8400, znaky $00-$5A (ikony, číslice 2×3, dílky ekvalizéru)
+        'statusFont': base64.b64encode(dump[0x8400 - 0x300:0x8400 - 0x300 + 0x5B * 8]).decode(),
+        # titulka a vítězná obrazovka: RAM $5400-$93FF (fonty, engine písmen, kód, texty, sinus, font textu $9000);
+        # běží v emulátoru 6502 (js/lm-ui.js TitleMachine)
+        'titleMem': base64.b64encode(dump[0x5400 - 0x300:0x9400 - 0x300]).decode(),
     }
     with open(a.out, 'w', encoding='utf-8') as f:
         f.write('// Vygenerováno tools/build_data.py – neupravovat ručně.\n')
