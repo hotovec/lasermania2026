@@ -27,8 +27,15 @@ Každý milník má automatické ověření. Stav odškrtávat zde. Postup: plan
   tank. Level 0 ve 4 fázích (`__game.load(0, 0, f)`): snímek portu = reference, fáze se liší, bez zmrazení se fáze
   mění po 4 snímcích. Všech 53 levelů (WebGPU i Canvas 2D): snímek portu = reference s paprskem; reference =
   screenshot bez masky paprsku (`screens.json`: fáze, nedokreslený paprsek u 6 levelů).
-- [ ] **M4 Smyčka a vstup** – `Timer(8)` / `BT.ticks % 8`, `BT.isPressed`, gamepad, výhra → další level.
+- [x] **M4 Smyčka a vstup** – `Timer(8)` / `BT.ticks % 8`, `BT.isPressed`, gamepad, výhra → další level.
   *Ověření:* golden testy (`npm test`) beze změny; v prohlížeči dohrát level 00.
+  *Stav:* hotovo. Vstup jako `control2` remaku (WASD + šipky + gamepad hráče 0, první směr
+  od posledního kroku, opakování až po 480 ms držení), krok na hranici 8 snímků, plynulý pohyb tanku i tlačené dlaždice (`tankOffset`), snímky
+  pásů a „zablokovaného“ tanku, výhra → za 1,6 s další level, po levelu 52 konec. Ověřeno přes `blit play`
+  (WebGPU i Canvas 2D): stisk 60–445 ms = vždy 1 políčko (63 stisků s náhodnou fází), 500 ms = 2, držení 1 s = 5 políček,
+  dvě rychlá ťuknutí = 2, náraz, tlačení zrcadla, výhra (fixture
+  `setTile`/`setTank`), konec; snímky M1–M3 beze změny. Ručně: level 00 dohrán klávesnicí, výhra přepnula na
+  další level (uživatel). Gamepad netestovaný (uživatel ho nemá, headless ho nenasimuluje).
 - [ ] **M5 Hudba a efekty** – detekce bodu smyčky CMC, render skladeb 1, 2, 3 do OGG + MP3,
   `BT.musicPlay` s `loopStart/loopEnd`, skladba podle levelu; efekty do WAV → `BT.soundPlay`
   na `LMCore.takeEvents()`.

@@ -54,6 +54,15 @@ v `js-demo/js/lm-graphics.js`); herní bity jsou v obou stejné (`TYPES` v `lm-c
   3 dolů; fáze pásů `(ZP_99 >> 2) & 1` při pohybu, zablokovaný (`ZP_AB`) = tank přirážející do překážky
   (snímky 8–15, posunuté). `LMTiles.tankFrame(face, fáze, zablokovaný)` převádí `GameState.face`
   (0 nahoru, 1 doleva, 2 dolů, 3 doprava).
+- Pohyb (`L_9C26`): na hranici kroku (`RTCLOK & 7 == 0`) se rozhodne směr (`L_94A7`), 8 snímků se tank posouvá
+  o `L_9F21` color clocků vodorovně (0..±7, 1 = 2 px) a `beam_data+1` řádků svisle (0..±14), pak se krok potvrdí
+  (`L_9B74`). Index tabulek = směr originálu × 8 + fáze `ZP_99`. Tlačená dlaždice klouže s ním (PMG hráči 2, 3).
+  Zablokovaný pokus: snímky 8–15 bez posunu.
+- Vstup (`control2`, remake): joystick a WASD každý snímek, uloží se první směr od posledního kroku
+  (`result_direction`); diagonála: doprava > doleva > dolů > nahoru. `control2.update`: pohyb z klidu, který je
+  na hranici kroku pořád držený, nastaví `repeat_delay_first = 1` → 2 kroky bez vstupu, pak opakování; změna směru
+  za jízdy bez pauzy; fire nebo Shift pauzu přeskočí.
+- Výhra (`L_9548`, typ `$20` při vjezdu): level + 1, život + 1, animace dalšího levelu `L_9720`; po `$53` konec.
 - Snímek 0 (doprava, stojí) přesně odpovídá tanku na screenshotech. `buld-p0/p1.dat` v `original-sources`
   jsou jiná data (remake), nepoužívat.
 

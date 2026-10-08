@@ -2,6 +2,22 @@
 
 Nové rozhodnutí přidat nahoru: datum, rozhodnutí, důvod.
 
+- **2026-10-08 Vstup podle `control2` (remake 2020).** Každý snímek se uloží první směr od posledního kroku
+  (`BT.isDown` nebo `BT.isPressed`, aby prošlo i krátké ťuknutí), pohyb se provede na hranici kroku
+  (`BT.ticks % 8`). Priorita při diagonále doprava > doleva > dolů > nahoru (`$94D4`). WASD + šipky hráče 0.
+  Pauza před opakováním: nový stisk pohne o 1 políčko, stejný směr držený nepřetržitě se zopakuje až po 480 ms
+  od stisku (`REPEAT_TICKS = 24`), pak jede každý krok; změna směru za jízdy bez pauzy, Shift / fire ji přeskočí.
+  Vyhodnocuje se při ukládání směru. Důvod: bez pauzy běžný stisk (~200 ms) posunul tank o 2 políčka; pauza
+  podle remaku (`repeat_delay_first`, 2 kroky od hranice kroku) kolísá 330–480 ms podle fáze stisku a občas
+  dávala 2 políčka dál (hlášeno při testu, změřeno přes `blit play`). 480 ms = horní mez remaku, bez kolísání.
+- **2026-10-08 Plynulý pohyb jen v kreslení.** `LMCore.move` proběhne hned (golden testy beze změny), tank a tlačená
+  dlaždice se 8 snímků kreslí z výchozího políčka s posunem z `L_9F21` / `beam_data+1` (`LMTiles.tankOffset`).
+  Paprsek se přepočítá hned po kroku (v originále až po dojetí) – rozdíl je kratší než jeden krok.
+- **2026-10-08 Výhra → další level za 1,6 s, po levelu 52 konec.** Jako demo. Animace dalšího levelu (`L_9720`)
+  a život navíc patří do M6; hlášky jsou zatím `BT.systemPrint` ve stavovém řádku.
+- **2026-10-08 Dev fixture `setTank`, `setTile`, `tile`, `beamCells`.** Jen v dev režimu, pro testy pohybu a výhry
+  bez řešení hlavolamu.
+
 - **2026-10-08 Glyfy paprsku v `lm-tiles.js`.** `BEAM_ANIM`, `BEAM_CHAR`, `decodeBeam`, `beamGlyph`, `beamPhase`
   přesunuté z `lm-graphics.js` (demo je používá, glyfy ověřené shodné). Průhledné pozadí glyfu, pořadí dlaždice →
   paprsek → tank. Důvod: sedí na všechny screenshoty, tank v originále je PMG nad playfieldem.

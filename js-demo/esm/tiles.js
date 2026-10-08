@@ -4,4 +4,4 @@ import '../js/lm-tiles.js';
 const LMTiles = globalThis.LMTiles;
 export default LMTiles;
 export const { TILE, COUNT, INV_ORIG, PAL, TANK_PAL, TANK_FRAMES, BEAM_ANIM, BEAM_CHAR, BEAM_GLYPHS, b64, decodeTiles,
-               decodeTank, tankFrame, beamBytes, decodeBeam, beamGlyph, beamPhase, renderPlayfield } = LMTiles;
+               decodeTank, tankFrame, MOVE_FRAMES, tankOffset, beamBytes, decodeBeam, beamGlyph, beamPhase, renderPlayfield } = LMTiles;

@@ -62,6 +62,14 @@ function decodeTank(pmg) {
 const FACE_DIR = [2, 1, 3, 0];   // LMCore face: 0 nahoru, 1 doleva, 2 dolů, 3 doprava
 const tankFrame = (face, phase = 0, blocked = false) => (FACE_DIR[face] | (blocked ? 4 : 0)) * 2 + (phase & 1);
 
+// plynulý pohyb tanku: 8 snímků na krok, index = směr originálu * 8 + fáze (ZP_99)
+// vodorovně L_9F21 v color clockách (1 = 2 px), svisle beam_data+1 v řádcích (1 = 1 px)
+const MOVE_FRAMES = 8;
+const MOVE_X = [0,1,2,3,4,5,6,7, 0,-1,-2,-3,-4,-5,-6,-7, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0];
+const MOVE_Y = [0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,-2,-4,-6,-8,-10,-12,-14, 0,2,4,6,8,10,12,14];
+// posun tanku (a tlačené dlaždice) od výchozího políčka ve fázi 0–7 pohybu ve směru face (LMCore)
+const tankOffset = (face, frame) => { const i = FACE_DIR[face] * 8 + frame; return { x: MOVE_X[i] * 2, y: MOVE_Y[i] }; };
+
 // ---- paprsek: VBI ($9BBA) kopíruje každé 4 snímky 16 bajtů z L_9F79 ($9F7A + fáze*16) do znaků 2–5 ----
 const BEAM_ANIM = [
   [0x02,0x03,0x0C,0x08,0x20,0x10,0x40,0x80, 0x80,0x40,0x10,0x20,0x08,0x0C,0x03,0x02],
@@ -115,6 +123,6 @@ function renderPlayfield(tiles, pf, tank, beam) {
 }
 
 root.LMTiles = { TILE, COUNT, INV_ORIG, PAL, TANK_PAL, TANK_FRAMES, BEAM_ANIM, BEAM_CHAR, BEAM_GLYPHS, b64, decodeTiles,
-                 decodeTank, tankFrame, beamBytes, decodeBeam, beamGlyph, beamPhase, renderPlayfield };
+                 decodeTank, tankFrame, MOVE_FRAMES, tankOffset, beamBytes, decodeBeam, beamGlyph, beamPhase, renderPlayfield };
 if (typeof module !== 'undefined') module.exports = root.LMTiles;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -156,6 +156,10 @@ pravidla) a `../project/docs/porting-plan.md` (milníky a stav). Odpovídej čes
   `npm run shot -- --all lasermania-blit386/screenshots/all`, pak
   `npm run compare -- --all lasermania-blit386/screenshots/all`.
 - `configure()`: `displaySize` 320×240, `targetFPS: 50` (PAL). Herní krok `LMCore.tick()` každých 8 ticků.
+- Vstup: WASD + šipky (`BT.inputMap`) + gamepad hráče 0, první směr od posledního kroku, `LMCore.move` na hranici kroku,
+  pak `tick` a `takeEvents`. Plynulý pohyb jen v kreslení (`LMTiles.tankOffset`, 8 snímků).
+- Dev fixture: `__game.setTank(pos)`, `setTile(pos, kód)`, `tile(pos)`, `beamCells()`; `state()` má `drawX/drawY`,
+  `moving`, `blocked`, `won`, `finished`.
 - Fáze animace paprsku: `LMTiles.beamPhase(BT.ticks)` = `(BT.ticks & 0x0C) >> 2`; viz `../project/docs/game-data.md`.
 - Paleta: slot 0 průhledný, 1 černá, 2–5 = PF0–PF3, 6–7 tank. Barevný bit dlaždic z `INV_ORIG`, ne z `TYPES`.
 - `drawSprite` v 1.7.1 neumí rotaci → tank = originální PMG snímky směrů (nic se neotáčí).

@@ -34,6 +34,10 @@ export declare function decodeBeam(): Uint8Array<ArrayBuffer>;
 export declare function beamGlyph(phase: number, dir: number): number;
 /** Fáze animace z počítadla snímků (RTCLOK, 50 Hz): (ticks & $0C) >> 2. */
 export declare function beamPhase(ticks: number): number;
+/** Počet snímků plynulého pohybu tanku o jedno políčko (8 = jeden herní krok). */
+export declare const MOVE_FRAMES: 8;
+/** Posun tanku v pixelech od výchozího políčka ve fázi 0–7 pohybu ve směru face (L_9F21, beam_data+1). */
+export declare function tankOffset(face: number, frame: number): { x: number; y: number };
 /** Tank pro renderPlayfield: pozice (řádek*16 + sloupec), snímek a výstup decodeTank. */
 export interface TankSprite { pos: number; frame: number; pixels: Uint8Array }
 /** Paprsek pro renderPlayfield: buňky (GameState.cells), fáze a výstup decodeBeam. */
@@ -45,7 +49,7 @@ declare const LMTiles: {
   TILE: typeof TILE; COUNT: typeof COUNT; INV_ORIG: typeof INV_ORIG; PAL: typeof PAL; TANK_PAL: typeof TANK_PAL;
   TANK_FRAMES: typeof TANK_FRAMES; BEAM_ANIM: typeof BEAM_ANIM; BEAM_CHAR: typeof BEAM_CHAR;
   BEAM_GLYPHS: typeof BEAM_GLYPHS; b64: typeof b64; decodeTiles: typeof decodeTiles; decodeTank: typeof decodeTank;
-  tankFrame: typeof tankFrame; beamBytes: typeof beamBytes; decodeBeam: typeof decodeBeam; beamGlyph: typeof beamGlyph;
+  tankFrame: typeof tankFrame; MOVE_FRAMES: typeof MOVE_FRAMES; tankOffset: typeof tankOffset; beamBytes: typeof beamBytes; decodeBeam: typeof decodeBeam; beamGlyph: typeof beamGlyph;
   beamPhase: typeof beamPhase; renderPlayfield: typeof renderPlayfield;
 };
 export default LMTiles;
